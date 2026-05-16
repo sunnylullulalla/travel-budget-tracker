@@ -625,6 +625,13 @@ function SetupScreen({ onStart, prevConfig, isReset }) {
             })()}
           </div>
 
+          {/* Delete warning — only on reset */}
+          {isReset && (
+            <p style={{ fontSize: 12, color: "#6A6050", margin: "4px 0 0", lineHeight: 1.7 }}>
+              {t.deleteWarning}
+            </p>
+          )}
+
           {/* Language dropdown — only on first setup */}
           {!isReset && (
           <div>

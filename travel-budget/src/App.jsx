@@ -973,7 +973,8 @@ function Tracker({ config, onReset, onHardReset }) {
               {cats.map(cat => {
                 const catBudget = cat.budget ? parseFloat(cat.budget) : null;
                 const catSpent = days.reduce((s, d) => s + (parseFloat(d[cat.id]) || 0), 0);
-                const catOver = catBudget !== null && catSpent > catBudget;
+                const todaySpent = parseFloat(activeDayData[cat.id]) || 0;
+                const catOver = catBudget !== null && todaySpent > catBudget;
                 return (
                   <div key={cat.id} style={{ background: "#0F0E0C", borderRadius: 10, padding: "11px", border: `1px solid ${catOver ? "#3A2020" : "#2A2822"}` }}>
                     {/* Label + budget badge */}

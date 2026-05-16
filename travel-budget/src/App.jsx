@@ -1,6 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
 const CONFIG_KEY = "tbv3-config";
+// Inject Google Font
+if (typeof document !== "undefined") {
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = "https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap";
+  document.head.appendChild(link);
+}
+
 const DAYS_KEY_PREFIX = "tbv3-days-";
 
 const CURRENCIES = [
@@ -348,7 +356,7 @@ const makeDays = (n, cats) => Array.from({ length: n }, (_, i) => makeDay(i + 1,
 const inputBase = {
   background: "#0F0E0C", border: "1px solid #2A2822", borderRadius: 10,
   color: "#F0EDE6", fontSize: 18, padding: "14px 16px", outline: "none",
-  fontFamily: "Georgia, serif", boxSizing: "border-box",
+  fontFamily: "'Noto Sans KR', sans-serif", boxSizing: "border-box",
 };
 const focusOrange = (e) => e.target.style.borderColor = "#E8845A";
 const blurGray    = (e) => e.target.style.borderColor = "#2A2822";
@@ -356,7 +364,7 @@ const blurGray    = (e) => e.target.style.borderColor = "#2A2822";
 const Pill = ({ active, onClick, children }) => (
   <button onClick={onClick} style={{
     padding: "9px 16px", borderRadius: 20, cursor: "pointer", fontSize: 13,
-    fontFamily: "Georgia, serif", transition: "all 0.15s",
+    fontFamily: "'Noto Sans KR', sans-serif", transition: "all 0.15s",
     background: active ? "#F0EDE6" : "#1A1814",
     color: active ? "#0F0E0C" : "#8A8070",
     border: active ? "none" : "1px solid #2A2822",
@@ -417,7 +425,7 @@ function SetupScreen({ onStart, prevConfig, isReset }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0F0E0C", color: "#F0EDE6", fontFamily: "Georgia, serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+    <div style={{ minHeight: "100vh", background: "#0F0E0C", color: "#F0EDE6", fontFamily: "'Noto Sans KR', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
       <div style={{ width: "100%", maxWidth: 420 }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
@@ -546,7 +554,7 @@ function SetupScreen({ onStart, prevConfig, isReset }) {
                           type="text" placeholder={t.newItem} value={newLabel}
                           onChange={e => setNewLabel(e.target.value)}
                           onKeyDown={e => { if (e.key === "Enter") addCat(); }}
-                          style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#C0B8A8", fontSize: 13, fontFamily: "Georgia, serif", padding: "6px 4px 6px 14px" }}
+                          style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#C0B8A8", fontSize: 13, fontFamily: "'Noto Sans KR', sans-serif", padding: "6px 4px 6px 14px" }}
                         />
                         <button onClick={addCat} style={{ background: "none", border: "none", color: "#8A8070", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "4px 10px", display: "flex", alignItems: "center" }}>+</button>
                       </div>
@@ -635,7 +643,7 @@ function SetupScreen({ onStart, prevConfig, isReset }) {
             marginTop: 4, padding: "16px",
             background: "linear-gradient(135deg,#E8845A,#7EB5D6)",
             border: "none", borderRadius: 12, color: "#0F0E0C",
-            fontSize: 16, fontFamily: "Georgia, serif", fontWeight: "bold", cursor: "pointer",
+            fontSize: 16, fontFamily: "'Noto Sans KR', sans-serif", fontWeight: "bold", cursor: "pointer",
           }}
             onMouseEnter={e => e.target.style.opacity = "0.85"}
             onMouseLeave={e => e.target.style.opacity = "1"}>
@@ -720,7 +728,7 @@ function CategoryEditor({ cats, onSave, onClose, t, sym }) {
                   type="text" placeholder={t.newItem} value={newLabel}
                   onChange={e => setNewLabel(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") addCat(); }}
-                  style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#C0B8A8", fontSize: 13, fontFamily: "Georgia, serif", padding: "6px 4px 6px 14px" }}
+                  style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#C0B8A8", fontSize: 13, fontFamily: "'Noto Sans KR', sans-serif", padding: "6px 4px 6px 14px" }}
                 />
                 <button onClick={addCat} style={{ background: "none", border: "none", color: "#8A8070", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "4px 10px", display: "flex", alignItems: "center" }}>+</button>
               </div>
@@ -740,7 +748,7 @@ function CategoryEditor({ cats, onSave, onClose, t, sym }) {
           width: "100%", padding: "14px",
           background: "linear-gradient(135deg,#E8845A,#7EB5D6)",
           border: "none", borderRadius: 12, color: "#0F0E0C",
-          fontSize: 15, fontFamily: "Georgia, serif", fontWeight: "bold", cursor: "pointer",
+          fontSize: 15, fontFamily: "'Noto Sans KR', sans-serif", fontWeight: "bold", cursor: "pointer",
         }}>{t.saveItems}</button>
       </div>
     </div>
@@ -821,7 +829,7 @@ function Tracker({ config, onReset }) {
   const showCatCols = !isTotal && lang === "ko"; // category breakdown only for Korean
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0F0E0C", color: "#F0EDE6", fontFamily: "Georgia, serif", overflowX: "hidden" }}>
+    <div style={{ minHeight: "100vh", background: "#0F0E0C", color: "#F0EDE6", fontFamily: "'Noto Sans KR', sans-serif", overflowX: "hidden" }}>
       {showEditor && <CategoryEditor cats={cats} onSave={handleSaveCats} onClose={() => setShowEditor(false)} t={t} sym={sym} />}
 
       {/* Reset confirm modal */}
@@ -835,11 +843,11 @@ function Tracker({ config, onReset }) {
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setShowResetConfirm(false)} style={{
                 flex: 1, padding: "13px", background: "#0F0E0C", border: "1px solid #2A2822",
-                borderRadius: 12, color: "#8A8070", fontSize: 14, fontFamily: "Georgia, serif", cursor: "pointer",
+                borderRadius: 12, color: "#8A8070", fontSize: 14, fontFamily: "'Noto Sans KR', sans-serif", cursor: "pointer",
               }}>취소</button>
               <button onClick={onReset} style={{
                 flex: 1, padding: "13px", background: "#3A1414", border: "1px solid #5A2020",
-                borderRadius: 12, color: "#E06060", fontSize: 14, fontFamily: "Georgia, serif",
+                borderRadius: 12, color: "#E06060", fontSize: 14, fontFamily: "'Noto Sans KR', sans-serif",
                 fontWeight: "bold", cursor: "pointer",
               }}>확인</button>
             </div>
@@ -860,7 +868,7 @@ function Tracker({ config, onReset }) {
               </div>
               <h1 style={{ fontSize: 20, fontWeight: "normal", margin: 0, letterSpacing: "-0.02em", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 {tripDays}일 · {sym}{TOTAL_BUDGET.toLocaleString()}
-                <button onClick={onReset} style={{ fontSize: 10, color: "#6A6050", background: "none", border: "1px solid #2A2822", borderRadius: 6, padding: "2px 8px", cursor: "pointer", fontFamily: "Georgia, serif" }}>{t.reset}</button>
+                <button onClick={onReset} style={{ fontSize: 10, color: "#6A6050", background: "none", border: "1px solid #2A2822", borderRadius: 6, padding: "2px 8px", cursor: "pointer", fontFamily: "'Noto Sans KR', sans-serif" }}>{t.reset}</button>
               </h1>
             </div>
             <div style={{ textAlign: "right" }}>
@@ -911,7 +919,7 @@ function Tracker({ config, onReset }) {
             </h2>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               {!isTotal && (
-                <button onClick={() => setShowEditor(true)} style={{ fontSize: 11, color: "#8A8070", background: "none", border: "1px solid #2A2822", borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "Georgia, serif" }}>
+                <button onClick={() => setShowEditor(true)} style={{ fontSize: 11, color: "#8A8070", background: "none", border: "1px solid #2A2822", borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "'Noto Sans KR', sans-serif" }}>
                   {t.editCats}
                 </button>
               )}
@@ -978,7 +986,7 @@ function Tracker({ config, onReset }) {
 
           <input type="text" placeholder={t.memo} value={activeDayData.note}
             onChange={e => updateDay(activeDay, "note", e.target.value)}
-            style={{ width: "100%", background: "#0F0E0C", border: "1px solid #2A2822", borderRadius: 8, color: "#8A8070", fontSize: 13, padding: "10px 12px", outline: "none", boxSizing: "border-box", fontFamily: "Georgia, serif" }}
+            style={{ width: "100%", background: "#0F0E0C", border: "1px solid #2A2822", borderRadius: 8, color: "#8A8070", fontSize: 13, padding: "10px 12px", outline: "none", boxSizing: "border-box", fontFamily: "'Noto Sans KR', sans-serif" }}
           />
         </div>
 
@@ -1081,7 +1089,7 @@ function Tracker({ config, onReset }) {
         <div style={{ display: "flex", justifyContent: "center", marginTop: 20 }}>
           <button onClick={() => setShowResetConfirm(true)} style={{
             background: "none", border: "1px solid #2A2822", borderRadius: 10,
-            color: "#4A4840", fontSize: 12, fontFamily: "Georgia, serif",
+            color: "#4A4840", fontSize: 12, fontFamily: "'Noto Sans KR', sans-serif",
             padding: "10px 24px", cursor: "pointer", letterSpacing: "0.05em",
           }}
             onMouseEnter={e => { e.target.style.borderColor = "#5A2020"; e.target.style.color = "#E06060"; }}
@@ -1100,18 +1108,31 @@ function Tracker({ config, onReset }) {
 }
 
 // ── Root ──────────────────────────────────────────────────────────────────────
+const NOTICE_KEY = "tbv3-notice-seen";
+
 export default function App() {
   const [config, setConfig] = useState(null);
   const [prevConfig, setPrevConfig] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showNotice, setShowNotice] = useState(false);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(CONFIG_KEY);
       if (raw) setConfig(JSON.parse(raw));
     } catch (e) {}
+    // Show notice only on first ever visit
+    try {
+      const seen = localStorage.getItem(NOTICE_KEY);
+      if (!seen) setShowNotice(true);
+    } catch (e) {}
     setLoading(false);
   }, []);
+
+  const handleDismissNotice = () => {
+    try { localStorage.setItem(NOTICE_KEY, "1"); } catch (e) {}
+    setShowNotice(false);
+  };
 
   const handleStart = (cfg) => {
     try { localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); } catch (e) {}
@@ -1119,16 +1140,55 @@ export default function App() {
   };
 
   const handleReset = () => {
+    // Clear config
     try { localStorage.removeItem(CONFIG_KEY); } catch (e) {}
-    setPrevConfig(config);
+    // Clear days data
+    if (config) {
+      const daysKey = DAYS_KEY_PREFIX + config.tripDays + "-" + config.currency;
+      try { localStorage.removeItem(daysKey); } catch (e) {}
+    }
+    setPrevConfig(null);  // no prefill — fresh start
     setConfig(null);
   };
 
   if (loading) return (
     <div style={{ minHeight: "100vh", background: "#0F0E0C", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <span style={{ color: "#4A4840", fontSize: 13, fontFamily: "Georgia, serif" }}>{T["ko"].loading}</span>
+      <span style={{ color: "#4A4840", fontSize: 13, fontFamily: "'Noto Sans KR', sans-serif" }}>{T["ko"].loading}</span>
     </div>
   );
 
-  return config ? <Tracker config={config} onReset={handleReset} /> : <SetupScreen onStart={handleStart} prevConfig={prevConfig} isReset={!!prevConfig} />;
+  return (
+    <>
+      {/* First-visit notice modal */}
+      {showNotice && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.82)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "#1A1814", borderRadius: 20, padding: "28px 24px", maxWidth: 340, width: "100%", border: "1px solid #2A2822" }}>
+            <p style={{ fontSize: 18, fontWeight: 700, margin: "0 0 12px", textAlign: "center", letterSpacing: "-0.02em", color: "#F0EDE6" }}>
+              👀 이 앱, 이렇게 쓰세요!
+            </p>
+            <p style={{ fontSize: 14, color: "#A09880", margin: "0 0 20px", lineHeight: 1.8, textAlign: "center" }}>
+              그룹에서 총무 한 명이 매일 지출을 기록하고, 저녁에 캡처해서 공유해보세요 📸
+            </p>
+            <div style={{ borderTop: "1px solid #2A2822", paddingTop: 16, marginBottom: 24 }}>
+              <p style={{ fontSize: 14, color: "#6A6050", margin: 0, lineHeight: 1.9, textAlign: "center" }}>
+                📌 데이터는 이 기기에서만 저장되므로 여행 내내 같은 기기로 사용하고, 시크릿 모드는 피해주세요!
+              </p>
+            </div>
+            <button
+              onClick={handleDismissNotice}
+              style={{
+                width: "100%", padding: "14px",
+                background: "linear-gradient(135deg,#E8845A,#7EB5D6)",
+                border: "none", borderRadius: 12, color: "#0F0E0C",
+                fontSize: 15, fontFamily: "'Noto Sans KR', sans-serif", fontWeight: "bold", cursor: "pointer",
+              }}
+            >
+              확인했어요!
+            </button>
+          </div>
+        </div>
+      )}
+      {config ? <Tracker config={config} onReset={handleReset} /> : <SetupScreen onStart={handleStart} prevConfig={prevConfig} isReset={false} />}
+    </>
+  );
 }

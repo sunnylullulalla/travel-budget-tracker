@@ -648,17 +648,18 @@ function SetupScreen({ onStart, prevConfig, isReset }) {
 }
 
 // ── CategoryEditor (bottom sheet) ───────────────────────────────────────────────────────────────
-function CategoryEditor({ cats, onSave, onClose, t }) {
+function CategoryEditor({ cats, onSave, onClose, t, sym }) {
   const [draft, setDraft] = useState(cats.map(c => ({ ...c })));
   const [newLabel, setNewLabel] = useState("");
   const addRef = useRef(null);
 
   const remove = (id) => { if (draft.length > 1) setDraft(p => p.filter(c => c.id !== id)); };
+  const updateBudget = (id, val) => setDraft(p => p.map(c => c.id === id ? { ...c, budget: val } : c));
   const addCat = () => {
     const label = newLabel.trim();
     if (!label || draft.length >= 7) return;
     const idx = draft.length % CAT_COLORS.length;
-    setDraft(p => [...p, { id: genId(), label, icon: CAT_ICONS[idx], color: CAT_COLORS[idx] }]);
+    setDraft(p => [...p, { id: genId(), label, icon: CAT_ICONS[idx], color: CAT_COLORS[idx], budget: "" }]);
     setNewLabel("");
     addRef.current?.focus();
   };
@@ -666,57 +667,72 @@ function CategoryEditor({ cats, onSave, onClose, t }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 100, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div style={{ width: "100%", maxWidth: 480, background: "#1A1814", borderRadius: "20px 20px 0 0", padding: "24px 20px 36px", maxHeight: "80vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: "normal" }}>{t.editItems}</h3>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#8A8070", fontSize: 22, cursor: "pointer", padding: "4px 8px", lineHeight: 1 }}>×</button>
         </div>
 
-        {/* Chip editor */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-          {draft.map(cat => (
-            <span key={cat.id} style={{
-              display: "inline-flex", alignItems: "center", gap: 5,
-              background: "#0F0E0C", border: `1px solid ${cat.color}44`,
-              borderRadius: 20, padding: "6px 10px 6px 12px",
-              fontSize: 13, color: "#C0B8A8",
-            }}>
-              <span style={{ fontSize: 14 }}>{cat.icon}</span>
-              {cat.label}
-              {draft.length > 1 && (
-                <button onClick={() => remove(cat.id)} style={{
-                  background: "none", border: "none", color: "#6A6050",
-                  cursor: "pointer", fontSize: 15, lineHeight: 1,
-                  padding: "0 0 0 2px", display: "flex", alignItems: "center",
-                }}>×</button>
-              )}
-            </span>
-          ))}
+        {/* Row layout with budget */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 6, borderBottom: "1px solid #2A2822" }}>
+            <span style={{ flex: 1, fontSize: 10, color: "#6A6050", letterSpacing: "0.1em", textTransform: "uppercase" }}>항목</span>
+            <span style={{ fontSize: 10, color: "#6A6050", letterSpacing: "0.1em", textTransform: "uppercase", width: 90, textAlign: "right" }}>예산 (선택)</span>
+            <span style={{ width: 20 }} />
+          </div>
 
+          {draft.map(cat => {
+            const val = parseFloat(cat.budget) || 0;
+            return (
+              <div key={cat.id}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{
+                    flex: 1, display: "inline-flex", alignItems: "center", gap: 6,
+                    background: "#0F0E0C", border: `1px solid ${cat.color}44`,
+                    borderRadius: 20, padding: "6px 12px", fontSize: 13, color: "#C0B8A8", minWidth: 0,
+                  }}>
+                    <span style={{ flexShrink: 0 }}>{cat.icon}</span>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cat.label}</span>
+                  </span>
+                  <div style={{ display: "flex", alignItems: "center", background: "#0F0E0C", border: `1px solid ${val > 0 ? cat.color + "55" : "#2A2822"}`, borderRadius: 10, overflow: "hidden", width: 90, flexShrink: 0 }}>
+                    <input
+                      type="number" placeholder="—" min={0}
+                      value={cat.budget || ""}
+                      onChange={e => updateBudget(cat.id, e.target.value)}
+                      style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: val > 0 ? "#F0EDE6" : "#4A4840", fontSize: 13, fontFamily: "monospace", padding: "7px 4px 7px 10px", width: 0 }}
+                    />
+                    <span style={{ fontSize: 11, color: "#4A4840", paddingRight: 8, flexShrink: 0 }}>{sym}</span>
+                  </div>
+                  {draft.length > 1 && (
+                    <button onClick={() => remove(cat.id)} style={{ background: "none", border: "none", color: "#6A6050", cursor: "pointer", fontSize: 16, lineHeight: 1, padding: 0, width: 20, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Add row */}
           {draft.length < 7 ? (
-            <div style={{ display: "inline-flex", alignItems: "center", background: "#0F0E0C", border: "1px dashed #3A3830", borderRadius: 20, overflow: "hidden" }}>
-              <input
-                ref={addRef}
-                type="text" placeholder={t.newItem} value={newLabel}
-                onChange={e => setNewLabel(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") addCat(); }}
-                style={{
-                  background: "transparent", border: "none", outline: "none",
-                  color: "#C0B8A8", fontSize: 13, fontFamily: "Georgia, serif",
-                  padding: "6px 4px 6px 14px", width: 72,
-                }}
-              />
-              <button onClick={addCat} style={{
-                background: "none", border: "none", color: "#8A8070",
-                cursor: "pointer", fontSize: 18, lineHeight: 1,
-                padding: "4px 10px", display: "flex", alignItems: "center",
-              }}>+</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ flex: 1, display: "inline-flex", alignItems: "center", background: "#0F0E0C", border: "1px dashed #3A3830", borderRadius: 20, overflow: "hidden" }}>
+                <input
+                  ref={addRef}
+                  type="text" placeholder={t.newItem} value={newLabel}
+                  onChange={e => setNewLabel(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") addCat(); }}
+                  style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#C0B8A8", fontSize: 13, fontFamily: "Georgia, serif", padding: "6px 4px 6px 14px" }}
+                />
+                <button onClick={addCat} style={{ background: "none", border: "none", color: "#8A8070", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "4px 10px", display: "flex", alignItems: "center" }}>+</button>
+              </div>
+              <span style={{ width: 90, flexShrink: 0 }} />
+              <span style={{ width: 20, flexShrink: 0 }} />
             </div>
           ) : (
-            <span style={{ fontSize: 11, color: "#6A6050", padding: "6px 12px", background: "#0F0E0C", border: "1px solid #2A2822", borderRadius: 20 }}>{t.maxItems}</span>
+            <span style={{ fontSize: 11, color: "#6A6050", padding: "6px 12px", background: "#0F0E0C", border: "1px solid #2A2822", borderRadius: 20, alignSelf: "flex-start" }}>{t.maxItems}</span>
           )}
         </div>
 
-        <p style={{ fontSize: 11, color: "#6A6050", margin: "0 0 18px", lineHeight: 1.6 }}>
+        <p style={{ fontSize: 11, color: "#6A6050", margin: "0 0 16px", lineHeight: 1.6 }}>
           {t.deleteWarning}
         </p>
 
@@ -749,8 +765,9 @@ function Tracker({ config, onReset }) {
     try {
       const raw = localStorage.getItem(daysStorageKey);
       if (raw) {
-        const { savedCats, savedDays } = JSON.parse(raw);
-        if (savedCats) setCats(savedCats);
+        const { savedDays } = JSON.parse(raw);
+        // Always use config.cats (reflects latest setup changes incl. budgets)
+        // Only restore day amount data
         if (savedDays && savedDays.length === tripDays) setDays(savedDays);
       }
     } catch (e) {}
@@ -804,7 +821,7 @@ function Tracker({ config, onReset }) {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0F0E0C", color: "#F0EDE6", fontFamily: "Georgia, serif", overflowX: "hidden" }}>
-      {showEditor && <CategoryEditor cats={cats} onSave={handleSaveCats} onClose={() => setShowEditor(false)} t={t} />}
+      {showEditor && <CategoryEditor cats={cats} onSave={handleSaveCats} onClose={() => setShowEditor(false)} t={t} sym={sym} />}
 
       {/* Header */}
       <div style={{ background: "linear-gradient(135deg,#1A1814,#0F0E0C)", borderBottom: "1px solid #2A2822", padding: "22px 18px 16px", position: "sticky", top: 0, zIndex: 10 }}>
@@ -905,7 +922,7 @@ function Tracker({ config, onReset }) {
                       <span style={{ fontSize: 12, color: "#8A8070" }}>{cat.icon} {cat.label}</span>
                       {catBudget !== null && (
                         <span style={{ fontSize: 10, color: catOver ? "#E06060" : "#6A6050", fontFamily: "monospace" }}>
-                          {fmtCompact(catSpent)}/{fmtCompact(catBudget)}{sym}
+                          {fmtCompact(catBudget)}{sym}
                         </span>
                       )}
                     </div>

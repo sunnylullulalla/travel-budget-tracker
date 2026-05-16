@@ -339,7 +339,7 @@ const PRESET_CATEGORIES = [
   { id: "shopping",  label: "쇼핑",   icon: "🛍", color: "#F2C46D" },
 ];
 
-const CAT_COLORS = ["#E8845A","#F2C46D","#6DB88A","#7EB5D6","#C97DB5","#E06060","#A0C4A0","#D4A96A","#7ABFBF","#B0A0D0"];
+const CAT_COLORS = ["#E8845A","#F2C46D","#6DB88A","#7EB5D6","#C97DB5","#E06060","#A0C4A0","#D4A96A","#6DB88A","#B0A0D0"];
 const CAT_ICONS  = ["🍽","☕","🛒","🔒","🚗","🎭","🏨","🛍","💊","📸","🍺","🎯"];
 
 const genId = () => Math.random().toString(36).slice(2, 8);
@@ -367,7 +367,7 @@ const inputBase = {
   color: "#F0EDE6", fontSize: 18, padding: "14px 16px", outline: "none",
   fontFamily: "'Noto Sans KR', sans-serif", boxSizing: "border-box",
 };
-const focusOrange = (e) => e.target.style.borderColor = "#E8845A";
+const focusOrange = (e) => e.target.style.borderColor = "#7EB5D6";
 const blurGray    = (e) => e.target.style.borderColor = "#2A2822";
 
 const Pill = ({ active, onClick, children }) => (
@@ -428,7 +428,7 @@ function SetupScreen({ onStart, prevConfig, isReset }) {
     if (!b || b <= 0) { setError(t.errorBudget); return; }
     if (mode === "preset" && cats.length === 0) { setError(t.errorCats); return; }
     const finalCats = mode === "total"
-      ? [{ id: "total", label: t.totalCatLabel, icon: "💳", color: "#E8845A" }]
+      ? [{ id: "total", label: t.totalCatLabel, icon: "💳", color: "#7EB5D6" }]
       : cats;
     onStart({ tripDays: d, dailyBudget: b, currency, mode, cats: finalCats, lang });
   };
@@ -521,7 +521,6 @@ function SetupScreen({ onStart, prevConfig, isReset }) {
                             borderRadius: 20, padding: "6px 12px",
                             fontSize: 13, color: "#C0B8A8", minWidth: 0,
                           }}>
-                            <span style={{ fontSize: 14, flexShrink: 0 }}>{cat.icon}</span>
                             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cat.label}</span>
                           </span>
                           <div style={{ display: "flex", alignItems: "center", background: "#0F0E0C", border: `1px solid ${val > 0 ? cat.color + "55" : "#2A2822"}`, borderRadius: 10, overflow: "hidden", width: 100, flexShrink: 0 }}>
@@ -565,9 +564,12 @@ function SetupScreen({ onStart, prevConfig, isReset }) {
                           onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCat(); } }}
                           style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#C0B8A8", fontSize: 13, fontFamily: "'Noto Sans KR', sans-serif", padding: "6px 4px 6px 14px" }}
                         />
-                        <button onClick={addCat} style={{ background: "none", border: "none", color: "#8A8070", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "4px 10px", display: "flex", alignItems: "center" }}>+</button>
                       </div>
-                      <span style={{ width: 100, flexShrink: 0 }} />
+                      <button onClick={addCat} style={{
+                        background: "#2A2822", border: "none", borderRadius: 10,
+                        color: "#F0EDE6", cursor: "pointer", fontSize: 18, lineHeight: 1,
+                        width: 100, height: 36, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      }}>+</button>
                       <span style={{ width: 20, flexShrink: 0 }} />
                     </div>
                   ) : (
@@ -715,7 +717,6 @@ function CategoryEditor({ cats, onSave, onClose, t, sym }) {
                     background: "#0F0E0C", border: `1px solid ${cat.color}44`,
                     borderRadius: 20, padding: "6px 12px", fontSize: 13, color: "#C0B8A8", minWidth: 0,
                   }}>
-                    <span style={{ flexShrink: 0 }}>{cat.icon}</span>
                     <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cat.label}</span>
                   </span>
                   <div style={{ display: "flex", alignItems: "center", background: "#0F0E0C", border: `1px solid ${val > 0 ? cat.color + "55" : "#2A2822"}`, borderRadius: 10, overflow: "hidden", width: 90, flexShrink: 0 }}>
@@ -741,14 +742,18 @@ function CategoryEditor({ cats, onSave, onClose, t, sym }) {
               <div style={{ flex: 1, display: "inline-flex", alignItems: "center", background: "#0F0E0C", border: "1px dashed #3A3830", borderRadius: 20, overflow: "hidden" }}>
                 <input
                   ref={addRef}
+                  autoFocus
                   type="text" placeholder={t.newItem} value={newLabel}
                   onChange={e => setNewLabel(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCat(); } }}
                   style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#C0B8A8", fontSize: 13, fontFamily: "'Noto Sans KR', sans-serif", padding: "6px 4px 6px 14px" }}
                 />
-                <button onClick={addCat} style={{ background: "none", border: "none", color: "#8A8070", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "4px 10px", display: "flex", alignItems: "center" }}>+</button>
               </div>
-              <span style={{ width: 90, flexShrink: 0 }} />
+              <button onClick={addCat} style={{
+                background: "#2A2822", border: "none", borderRadius: 10,
+                color: "#F0EDE6", cursor: "pointer", fontSize: 18, lineHeight: 1,
+                width: 90, height: 36, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>+</button>
               <span style={{ width: 20, flexShrink: 0 }} />
             </div>
           ) : (
@@ -970,7 +975,7 @@ function Tracker({ config, onReset, onHardReset }) {
                 <input type="number" placeholder="0"
                   value={activeDayData["total"] || ""}
                   onChange={e => updateDay(activeDay, "total", e.target.value)}
-                  style={{ flex: 1, background: "transparent", border: "none", borderBottom: `1px solid ${activeDayData["total"] ? "#E8845A" : "#2A2822"}`, color: "#F0EDE6", fontSize: 32, fontFamily: "monospace", padding: "4px 0", outline: "none", minWidth: 0 }}
+                  style={{ flex: 1, background: "transparent", border: "none", borderBottom: `1px solid ${activeDayData["total"] ? "#7EB5D6" : "#2A2822"}`, color: "#F0EDE6", fontSize: 32, fontFamily: "monospace", padding: "4px 0", outline: "none", minWidth: 0 }}
                 />
                 <span style={{ fontSize: 16, color: "#4A4840" }}>{sym}</span>
               </div>
@@ -986,7 +991,7 @@ function Tracker({ config, onReset, onHardReset }) {
                   <div key={cat.id} style={{ background: "#0F0E0C", borderRadius: 10, padding: "11px", border: `1px solid ${catOver ? "#3A2020" : "#2A2822"}` }}>
                     {/* Label + budget badge */}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <span style={{ fontSize: 12, color: "#8A8070" }}>{cat.icon} {cat.label}</span>
+                      <span style={{ fontSize: 12, color: "#8A8070" }}>{cat.label}</span>
                       {catBudget !== null && (
                         <span style={{ fontSize: 10, color: catOver ? "#E06060" : "#6A6050", fontFamily: "monospace" }}>
                           {fmtCompact(catBudget)}{sym}
@@ -995,13 +1000,16 @@ function Tracker({ config, onReset, onHardReset }) {
                     </div>
                     {/* Mini progress bar if budget set */}
                     {catBudget !== null && (
-                      <div style={{ height: 2, background: "#1E1C18", borderRadius: 2, marginBottom: 8, overflow: "hidden" }}>
-                        <div style={{
-                          height: "100%", borderRadius: 2,
-                          width: `${Math.min((catSpent / catBudget) * 100, 100)}%`,
-                          background: catOver ? "#E06060" : cat.color,
-                          transition: "width 0.3s ease",
-                        }} />
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 8 }}>
+                        <div style={{ flex: 1, height: 2, background: "#1E1C18", borderRadius: 2, overflow: "hidden" }}>
+                          <div style={{
+                            height: "100%", borderRadius: 2,
+                            width: `${Math.min((todaySpent / catBudget) * 100, 100)}%`,
+                            background: catOver ? "#E06060" : cat.color,
+                            transition: "width 0.3s ease",
+                          }} />
+                        </div>
+                        <span style={{ fontSize: 12, color: "transparent", fontFamily: "monospace" }}>€</span>
                       </div>
                     )}
                     {/* Amount input */}

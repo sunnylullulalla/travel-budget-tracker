@@ -562,7 +562,7 @@ function SetupScreen({ onStart, prevConfig, isReset }) {
                           ref={addInputRef}
                           type="text" placeholder={t.newItem} value={newLabel}
                           onChange={e => setNewLabel(e.target.value)}
-                          onKeyDown={e => { if (e.key === "Enter") addCat(); }}
+                          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCat(); } }}
                           style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#C0B8A8", fontSize: 13, fontFamily: "'Noto Sans KR', sans-serif", padding: "6px 4px 6px 14px" }}
                         />
                         <button onClick={addCat} style={{ background: "none", border: "none", color: "#8A8070", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "4px 10px", display: "flex", alignItems: "center" }}>+</button>
@@ -736,7 +736,7 @@ function CategoryEditor({ cats, onSave, onClose, t, sym }) {
                   ref={addRef}
                   type="text" placeholder={t.newItem} value={newLabel}
                   onChange={e => setNewLabel(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") addCat(); }}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCat(); } }}
                   style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#C0B8A8", fontSize: 13, fontFamily: "'Noto Sans KR', sans-serif", padding: "6px 4px 6px 14px" }}
                 />
                 <button onClick={addCat} style={{ background: "none", border: "none", color: "#8A8070", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "4px 10px", display: "flex", alignItems: "center" }}>+</button>

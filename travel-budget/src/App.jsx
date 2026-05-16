@@ -639,7 +639,7 @@ function SetupScreen({ onStart, prevConfig, isReset }) {
           }}
             onMouseEnter={e => e.target.style.opacity = "0.85"}
             onMouseLeave={e => e.target.style.opacity = "1"}>
-            {t.start}
+            {isReset ? "저장하기 →" : t.start}
           </button>
         </div>
       </div>
@@ -760,6 +760,7 @@ function Tracker({ config, onReset }) {
   const [activeDay, setActiveDay] = useState(1);
   const [saveStatus, setSaveStatus] = useState("idle");
   const [showEditor, setShowEditor] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   useEffect(() => {
     try {
@@ -822,6 +823,29 @@ function Tracker({ config, onReset }) {
   return (
     <div style={{ minHeight: "100vh", background: "#0F0E0C", color: "#F0EDE6", fontFamily: "Georgia, serif", overflowX: "hidden" }}>
       {showEditor && <CategoryEditor cats={cats} onSave={handleSaveCats} onClose={() => setShowEditor(false)} t={t} sym={sym} />}
+
+      {/* Reset confirm modal */}
+      {showResetConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "#1A1814", borderRadius: 20, padding: "28px 24px", maxWidth: 340, width: "100%", border: "1px solid #2A2822" }}>
+            <p style={{ fontSize: 18, margin: "0 0 10px", fontWeight: "normal" }}>초기화할까요?</p>
+            <p style={{ fontSize: 13, color: "#8A8070", margin: "0 0 24px", lineHeight: 1.7 }}>
+              기존에 입력한 내용이 모두 사라집니다.<br/>이 작업은 되돌릴 수 없어요.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setShowResetConfirm(false)} style={{
+                flex: 1, padding: "13px", background: "#0F0E0C", border: "1px solid #2A2822",
+                borderRadius: 12, color: "#8A8070", fontSize: 14, fontFamily: "Georgia, serif", cursor: "pointer",
+              }}>취소</button>
+              <button onClick={onReset} style={{
+                flex: 1, padding: "13px", background: "#3A1414", border: "1px solid #5A2020",
+                borderRadius: 12, color: "#E06060", fontSize: 14, fontFamily: "Georgia, serif",
+                fontWeight: "bold", cursor: "pointer",
+              }}>확인</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ background: "linear-gradient(135deg,#1A1814,#0F0E0C)", borderBottom: "1px solid #2A2822", padding: "22px 18px 16px", position: "sticky", top: 0, zIndex: 10 }}>
@@ -1052,7 +1076,22 @@ function Tracker({ config, onReset }) {
         <p style={{ textAlign: "center", fontSize: 11, color: "#3A3830", marginTop: 18, letterSpacing: "0.08em" }}>
           {t.dailyGoal(sym, dailyBudget.toLocaleString(), tripDays)}
         </p>
-        <p style={{ textAlign: "center", fontSize: 10, color: "#2A2820", marginTop: 6, letterSpacing: "0.05em" }}>
+
+        {/* Reset button */}
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 20 }}>
+          <button onClick={() => setShowResetConfirm(true)} style={{
+            background: "none", border: "1px solid #2A2822", borderRadius: 10,
+            color: "#4A4840", fontSize: 12, fontFamily: "Georgia, serif",
+            padding: "10px 24px", cursor: "pointer", letterSpacing: "0.05em",
+          }}
+            onMouseEnter={e => { e.target.style.borderColor = "#5A2020"; e.target.style.color = "#E06060"; }}
+            onMouseLeave={e => { e.target.style.borderColor = "#2A2822"; e.target.style.color = "#4A4840"; }}
+          >
+            초기화
+          </button>
+        </div>
+
+        <p style={{ textAlign: "center", fontSize: 10, color: "#2A2820", marginTop: 16, letterSpacing: "0.05em" }}>
           © 이 앱의 소유권은 @minorimaiori에게 있습니다
         </p>
       </div>

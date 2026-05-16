@@ -764,7 +764,7 @@ function CategoryEditor({ cats, onSave, onClose, t, sym }) {
   );
 }
 // ── Tracker ───────────────────────────────────────────────────────────────────
-function Tracker({ config, onReset }) {
+function Tracker({ config, onReset, onHardReset }) {
   const { tripDays, dailyBudget, currency, mode, lang } = config;
   const t = T[lang] || T.ko;
   const curr = CURRENCIES.find(c => c.code === currency) || CURRENCIES[0];
@@ -854,7 +854,7 @@ function Tracker({ config, onReset }) {
                 flex: 1, padding: "13px", background: "#0F0E0C", border: "1px solid #2A2822",
                 borderRadius: 12, color: "#8A8070", fontSize: 14, fontFamily: "'Noto Sans KR', sans-serif", cursor: "pointer",
               }}>취소</button>
-              <button onClick={onReset} style={{
+              <button onClick={onHardReset} style={{
                 flex: 1, padding: "13px", background: "#3A1414", border: "1px solid #5A2020",
                 borderRadius: 12, color: "#E06060", fontSize: 14, fontFamily: "'Noto Sans KR', sans-serif",
                 fontWeight: "bold", cursor: "pointer",
@@ -898,6 +898,24 @@ function Tracker({ config, onReset }) {
       </div>
 
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 14px" }}>
+        {/* Cumulative */}
+        <div style={{ background: delta >= 0 ? "#141A16" : "#1A1414", border: `1px solid ${delta >= 0 ? "#1E3020" : "#301E1E"}`, borderRadius: 12, padding: "12px 16px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 11, color: "#8A8070" }}>{t.cumulative(activeDay)}</p>
+            <p style={{ margin: "4px 0 0", fontSize: 14 }}>
+              {t.used} <strong style={{ color: "#F0EDE6" }}>{sym}{cumulativeAtActive.toLocaleString()}</strong>
+              <span style={{ color: "#4A4840", margin: "0 5px" }}>/</span>
+              {t.budgetLabel} {sym}{budgetAtActive.toLocaleString()}
+            </p>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <p style={{ margin: 0, fontSize: 11, color: "#8A8070" }}>{delta >= 0 ? t.slack : t.over}</p>
+            <p style={{ margin: "2px 0 0", fontSize: 20, fontWeight: "bold", color: delta >= 0 ? "#6DB88A" : "#E06060" }}>
+              {delta >= 0 ? "+" : ""}{delta.toLocaleString()}{sym}
+            </p>
+          </div>
+        </div>
+
         {/* Day tabs */}
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gap: 4, marginBottom: 16 }}>
           {days.map(d => {
@@ -997,24 +1015,6 @@ function Tracker({ config, onReset }) {
             onChange={e => updateDay(activeDay, "note", e.target.value)}
             style={{ width: "100%", background: "#0F0E0C", border: "1px solid #2A2822", borderRadius: 8, color: "#8A8070", fontSize: 13, padding: "10px 12px", outline: "none", boxSizing: "border-box", fontFamily: "'Noto Sans KR', sans-serif" }}
           />
-        </div>
-
-        {/* Cumulative */}
-        <div style={{ background: delta >= 0 ? "#141A16" : "#1A1414", border: `1px solid ${delta >= 0 ? "#1E3020" : "#301E1E"}`, borderRadius: 12, padding: "12px 16px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <p style={{ margin: 0, fontSize: 11, color: "#8A8070" }}>{t.cumulative(activeDay)}</p>
-            <p style={{ margin: "4px 0 0", fontSize: 14 }}>
-              {t.used} <strong style={{ color: "#F0EDE6" }}>{sym}{cumulativeAtActive.toLocaleString()}</strong>
-              <span style={{ color: "#4A4840", margin: "0 5px" }}>/</span>
-              {t.budgetLabel} {sym}{budgetAtActive.toLocaleString()}
-            </p>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <p style={{ margin: 0, fontSize: 11, color: "#8A8070" }}>{delta >= 0 ? t.slack : t.over}</p>
-            <p style={{ margin: "2px 0 0", fontSize: 20, fontWeight: "bold", color: delta >= 0 ? "#6DB88A" : "#E06060" }}>
-              {delta >= 0 ? "+" : ""}{delta.toLocaleString()}{sym}
-            </p>
-          </div>
         </div>
 
         {/* Summary */}
@@ -1146,12 +1146,19 @@ export default function App() {
   const handleStart = (cfg) => {
     try { localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); } catch (e) {}
     setConfig(cfg);
+    window.scrollTo({ top: 0, behavior: "instant" });
   };
 
   const handleReset = () => {
-    // Clear config
+    // Clear config but keep prevConfig for prefill
     try { localStorage.removeItem(CONFIG_KEY); } catch (e) {}
-    // Clear days data
+    setPrevConfig(config);  // prefill with current values
+    setConfig(null);
+  };
+
+  const handleHardReset = () => {
+    // Full wipe — used by in-app 초기화 button
+    try { localStorage.removeItem(CONFIG_KEY); } catch (e) {}
     if (config) {
       const daysKey = DAYS_KEY_PREFIX + config.tripDays + "-" + config.currency;
       try { localStorage.removeItem(daysKey); } catch (e) {}
@@ -1197,7 +1204,7 @@ export default function App() {
           </div>
         </div>
       )}
-      {config ? <Tracker config={config} onReset={handleReset} /> : <SetupScreen onStart={handleStart} prevConfig={prevConfig} isReset={false} />}
+      {config ? <Tracker config={config} onReset={handleReset} onHardReset={handleHardReset} /> : <SetupScreen onStart={handleStart} prevConfig={prevConfig} isReset={!!prevConfig} />}
     </>
   );
 }

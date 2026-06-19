@@ -344,6 +344,16 @@ const CAT_ICONS  = ["🍽","☕","🛒","🔒","🚗","🎭","🏨","🛍","💊
 
 const genId = () => Math.random().toString(36).slice(2, 8);
 
+// Cat items helpers — handle both legacy string and new array format
+const getCatItems = (dayData, catId) => {
+  const val = dayData[catId];
+  if (!val || val === "") return [];
+  if (Array.isArray(val)) return val;
+  return [{ id: "legacy", label: "", amount: String(val) }];
+};
+const getCatTotal = (dayData, catId) =>
+  getCatItems(dayData, catId).reduce((s, item) => s + (parseFloat(item.amount) || 0), 0);
+
 // Compact number for table cells: keeps to ~4 chars max
 // e.g. 1234 → "1234", 12345 → "12K", 123456 → "123K", 1234567 → "1.2M"
 const fmtCompact = (n) => {
@@ -371,7 +381,7 @@ const focusOrange = (e) => e.target.style.borderColor = "#7EB5D6";
 const blurGray    = (e) => e.target.style.borderColor = "#2A2822";
 
 const Pill = ({ active, onClick, children }) => (
-  <button onClick={onClick} style={{
+  <button className={`pill${active ? " pill--active" : ""}`} onClick={onClick} style={{
     padding: "9px 16px", borderRadius: 20, cursor: "pointer", fontSize: 13,
     fontFamily: "'Noto Sans KR', sans-serif", transition: "all 0.15s",
     background: active ? "#F0EDE6" : "#1A1814",
@@ -434,8 +444,8 @@ function SetupScreen({ onStart, prevConfig, isReset }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0F0E0C", color: "#F0EDE6", fontFamily: "'Noto Sans KR', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
-      <div style={{ width: "100%", maxWidth: 420 }}>
+    <div className="setup-screen" style={{ minHeight: "100vh", background: "#0F0E0C", color: "#F0EDE6", fontFamily: "'Noto Sans KR', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+      <div className="setup-card" style={{ width: "100%", maxWidth: 420 }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg,#E8845A,#7EB5D6)", margin: "0 auto 14px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>✈</div>
@@ -691,8 +701,8 @@ function CategoryEditor({ cats, onSave, onClose, t, sym }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 100, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div style={{ width: "100%", maxWidth: 480, background: "#1A1814", borderRadius: "20px 20px 0 0", padding: "24px 20px 36px", maxHeight: "80vh", overflowY: "auto" }}>
+    <div className="category-editor-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 100, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div className="category-editor" style={{ width: "100%", maxWidth: 480, background: "#1A1814", borderRadius: "20px 20px 0 0", padding: "24px 20px 36px", maxHeight: "80vh", overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: "normal" }}>{t.editItems}</h3>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#8A8070", fontSize: 22, cursor: "pointer", padding: "4px 8px", lineHeight: 1 }}>×</button>
@@ -790,6 +800,10 @@ function Tracker({ config, onReset, onHardReset }) {
   const [saveStatus, setSaveStatus] = useState("idle");
   const [showEditor, setShowEditor] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [expandedCats, setExpandedCats] = useState(new Set());
+  const [quickAddState, setQuickAddState] = useState({});
+
+  useEffect(() => { setExpandedCats(new Set()); setQuickAddState({}); }, [activeDay]);
 
   useEffect(() => {
     try {
@@ -823,6 +837,46 @@ function Tracker({ config, onReset, onHardReset }) {
     });
   };
 
+  const addCatItem = (dayNum, catId, label = "", amount = "") => {
+    setDays(prev => {
+      const next = prev.map(d => {
+        if (d.day !== dayNum) return d;
+        return { ...d, [catId]: [...getCatItems(d, catId), { id: genId(), label, amount }] };
+      });
+      persist(next, cats);
+      return next;
+    });
+  };
+
+  const handleQuickAdd = (catId) => {
+    const qa = quickAddState[catId] || { label: "", amount: "" };
+    if (!qa.amount) return;
+    addCatItem(activeDay, catId, qa.label, qa.amount);
+    setQuickAddState(prev => ({ ...prev, [catId]: { label: "", amount: "" } }));
+  };
+
+  const updateCatItem = (dayNum, catId, itemId, field, value) => {
+    setDays(prev => {
+      const next = prev.map(d => {
+        if (d.day !== dayNum) return d;
+        return { ...d, [catId]: getCatItems(d, catId).map(item => item.id === itemId ? { ...item, [field]: value } : item) };
+      });
+      persist(next, cats);
+      return next;
+    });
+  };
+
+  const removeCatItem = (dayNum, catId, itemId) => {
+    setDays(prev => {
+      const next = prev.map(d => {
+        if (d.day !== dayNum) return d;
+        return { ...d, [catId]: getCatItems(d, catId).filter(item => item.id !== itemId) };
+      });
+      persist(next, cats);
+      return next;
+    });
+  };
+
   const handleSaveCats = (newCats) => {
     const newDays = days.map(d => {
       const obj = { day: d.day, note: d.note };
@@ -835,7 +889,7 @@ function Tracker({ config, onReset, onHardReset }) {
     setShowEditor(false);
   };
 
-  const getDayTotal = (d) => cats.reduce((s, c) => s + (parseFloat(d[c.id]) || 0), 0);
+  const getDayTotal = (d) => cats.reduce((s, c) => s + getCatTotal(d, c.id), 0);
   const getCumulative = (n) => days.slice(0, n).reduce((s, d) => s + getDayTotal(d), 0);
 
   const totalSpent = getCumulative(tripDays);
@@ -850,13 +904,13 @@ function Tracker({ config, onReset, onHardReset }) {
   const showCatCols = !isTotal && lang === "ko"; // category breakdown only for Korean
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0F0E0C", color: "#F0EDE6", fontFamily: "'Noto Sans KR', sans-serif", overflowX: "hidden" }}>
+    <div className="tracker" style={{ minHeight: "100vh", background: "#0F0E0C", color: "#F0EDE6", fontFamily: "'Noto Sans KR', sans-serif", overflowX: "hidden" }}>
       {showEditor && <CategoryEditor cats={cats} onSave={handleSaveCats} onClose={() => setShowEditor(false)} t={t} sym={sym} />}
 
       {/* Reset confirm modal */}
       {showResetConfirm && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: "#1A1814", borderRadius: 20, padding: "28px 24px", maxWidth: 340, width: "100%", border: "1px solid #2A2822" }}>
+        <div className="reset-confirm-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div className="reset-confirm-modal" style={{ background: "#1A1814", borderRadius: 20, padding: "28px 24px", maxWidth: 340, width: "100%", border: "1px solid #2A2822" }}>
             <p style={{ fontSize: 18, margin: "0 0 10px", fontWeight: "normal" }}>초기화할까요?</p>
             <p style={{ fontSize: 13, color: "#8A8070", margin: "0 0 24px", lineHeight: 1.7 }}>
               기존에 입력한 내용이 모두 사라집니다.<br/>이 작업은 되돌릴 수 없어요.
@@ -877,178 +931,255 @@ function Tracker({ config, onReset, onHardReset }) {
       )}
 
       {/* Header */}
-      <div style={{ background: "linear-gradient(135deg,#1A1814,#0F0E0C)", borderBottom: "1px solid #2A2822", padding: "22px 18px 16px", position: "sticky", top: 0, zIndex: 10 }}>
-        <div style={{ maxWidth: 480, margin: "0 auto" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <p style={{ fontSize: 11, letterSpacing: "0.2em", color: "#8A8070", margin: 0, textTransform: "uppercase" }}>{t.budget}</p>
-                {saveStatus === "saving" && <span style={{ fontSize: 10, color: "#8A8070" }}>{t.saving}</span>}
-                {saveStatus === "saved"  && <span style={{ fontSize: 10, color: "#6DB88A" }}>{t.saved}</span>}
-                {saveStatus === "error"  && <span style={{ fontSize: 10, color: "#E06060" }}>{t.saveError}</span>}
+      <div className="tracker-header" style={{ background: "linear-gradient(135deg,#1A1814,#0F0E0C)", borderBottom: "1px solid #2A2822", padding: "22px 18px 16px", position: "sticky", top: 0, zIndex: 10 }}>
+        <div className="tracker-header-inner" style={{ maxWidth: 480, margin: "0 auto" }}>
+          <div className="tracker-header-top" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div className="tracker-header-left">
+              <div className="tracker-title-row" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <p className="tracker-budget-label" style={{ fontSize: 11, letterSpacing: "0.2em", color: "#8A8070", margin: 0, textTransform: "uppercase" }}>{t.budget}</p>
+                {saveStatus === "saving" && <span className="save-status save-status--saving" style={{ fontSize: 10, color: "#8A8070" }}>{t.saving}</span>}
+                {saveStatus === "saved"  && <span className="save-status save-status--saved" style={{ fontSize: 10, color: "#6DB88A" }}>{t.saved}</span>}
+                {saveStatus === "error"  && <span className="save-status save-status--error" style={{ fontSize: 10, color: "#E06060" }}>{t.saveError}</span>}
               </div>
-              <h1 style={{ fontSize: 20, fontWeight: "normal", margin: 0, letterSpacing: "-0.02em", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <h1 className="tracker-title" style={{ fontSize: 20, fontWeight: "normal", margin: 0, letterSpacing: "-0.02em", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 {tripDays}일 · {sym}{TOTAL_BUDGET.toLocaleString()}
-                <button onClick={onReset} style={{ fontSize: 10, color: "#6A6050", background: "none", border: "1px solid #2A2822", borderRadius: 6, padding: "2px 8px", cursor: "pointer", fontFamily: "'Noto Sans KR', sans-serif" }}>{t.reset}</button>
+                <button className="btn-reset-setup" onClick={onReset} style={{ fontSize: 10, color: "#6A6050", background: "none", border: "1px solid #2A2822", borderRadius: 6, padding: "2px 8px", cursor: "pointer", fontFamily: "'Noto Sans KR', sans-serif" }}>{t.reset}</button>
               </h1>
             </div>
-            <div style={{ textAlign: "right" }}>
-              <p style={{ fontSize: 11, color: "#8A8070", margin: "0 0 3px" }}>{t.remaining}</p>
-              <p style={{ fontSize: 20, fontWeight: "bold", margin: 0, color: remaining >= 0 ? "#6DB88A" : "#E06060" }}>
-                {remaining >= 0 ? "+" : ""}{remaining.toLocaleString()}<span style={{ fontSize: 11 }}>{sym}</span>
+            <div className="tracker-header-right" style={{ textAlign: "right" }}>
+              <p className="remaining-label" style={{ fontSize: 11, color: "#8A8070", margin: "0 0 3px" }}>{t.remaining}</p>
+              <p className="remaining-amount" style={{ fontSize: 20, fontWeight: "bold", margin: 0, color: remaining >= 0 ? "#6DB88A" : "#E06060" }}>
+                {remaining >= 0 ? "+" : ""}{remaining.toLocaleString()}<span className="remaining-sym" style={{ fontSize: 11 }}>{sym}</span>
               </p>
             </div>
           </div>
-          <div style={{ marginTop: 12, background: "#1E1C18", borderRadius: 4, height: 5, overflow: "hidden" }}>
-            <div style={{ height: "100%", borderRadius: 4, transition: "width 0.4s ease", width: `${Math.min((totalSpent / TOTAL_BUDGET) * 100, 100)}%`, background: totalSpent > TOTAL_BUDGET ? "linear-gradient(90deg,#E8845A,#E06060)" : "linear-gradient(90deg,#6DB88A,#7EB5D6)" }} />
+          <div className="tracker-progress-track" style={{ marginTop: 12, background: "#1E1C18", borderRadius: 4, height: 5, overflow: "hidden" }}>
+            <div className="tracker-progress-fill" style={{ height: "100%", borderRadius: 4, transition: "width 0.4s ease", width: `${Math.min((totalSpent / TOTAL_BUDGET) * 100, 100)}%`, background: totalSpent > TOTAL_BUDGET ? "linear-gradient(90deg,#E8845A,#E06060)" : "linear-gradient(90deg,#6DB88A,#7EB5D6)" }} />
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
-            <span style={{ fontSize: 11, color: "#8A8070" }}>{t.used} {sym}{totalSpent.toLocaleString()}</span>
-            <span style={{ fontSize: 11, color: "#8A8070" }}>{((totalSpent / TOTAL_BUDGET) * 100).toFixed(0)}%</span>
+          <div className="tracker-progress-stats" style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
+            <span className="progress-spent" style={{ fontSize: 11, color: "#8A8070" }}>{t.used} {sym}{totalSpent.toLocaleString()}</span>
+            <span className="progress-pct" style={{ fontSize: 11, color: "#8A8070" }}>{((totalSpent / TOTAL_BUDGET) * 100).toFixed(0)}%</span>
           </div>
         </div>
       </div>
 
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 14px" }}>
+      <div className="tracker-body" style={{ maxWidth: 480, margin: "0 auto", padding: "16px 14px" }}>
         {/* Cumulative */}
-        <div style={{ background: delta >= 0 ? "#141A16" : "#1A1414", border: `1px solid ${delta >= 0 ? "#1E3020" : "#301E1E"}`, borderRadius: 12, padding: "12px 16px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <p style={{ margin: 0, fontSize: 11, color: "#8A8070" }}>{t.cumulative(activeDay)}</p>
-            <p style={{ margin: "4px 0 0", fontSize: 14 }}>
-              {t.used} <strong style={{ color: "#F0EDE6" }}>{sym}{cumulativeAtActive.toLocaleString()}</strong>
+        <div className="cumulative-bar" style={{ background: delta >= 0 ? "#141A16" : "#1A1414", border: `1px solid ${delta >= 0 ? "#1E3020" : "#301E1E"}`, borderRadius: 12, padding: "12px 16px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div className="cumulative-left">
+            <p className="cumulative-label" style={{ margin: 0, fontSize: 11, color: "#8A8070" }}>{t.cumulative(activeDay)}</p>
+            <p className="cumulative-detail" style={{ margin: "4px 0 0", fontSize: 14 }}>
+              {t.used} <strong className="cumulative-spent" style={{ color: "#F0EDE6" }}>{sym}{cumulativeAtActive.toLocaleString()}</strong>
               <span style={{ color: "#4A4840", margin: "0 5px" }}>/</span>
               {t.budgetLabel} {sym}{budgetAtActive.toLocaleString()}
             </p>
           </div>
-          <div style={{ textAlign: "right" }}>
-            <p style={{ margin: 0, fontSize: 11, color: "#8A8070" }}>{delta >= 0 ? t.slack : t.over}</p>
-            <p style={{ margin: "2px 0 0", fontSize: 20, fontWeight: "bold", color: delta >= 0 ? "#6DB88A" : "#E06060" }}>
+          <div className="cumulative-right" style={{ textAlign: "right" }}>
+            <p className="cumulative-delta-label" style={{ margin: 0, fontSize: 11, color: "#8A8070" }}>{delta >= 0 ? t.slack : t.over}</p>
+            <p className="cumulative-delta-amount" style={{ margin: "2px 0 0", fontSize: 20, fontWeight: "bold", color: delta >= 0 ? "#6DB88A" : "#E06060" }}>
               {delta >= 0 ? "+" : ""}{delta.toLocaleString()}{sym}
             </p>
           </div>
         </div>
 
         {/* Day tabs */}
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gap: 4, marginBottom: 16 }}>
+        <div className="day-tabs" style={{ display: "grid", gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gap: 4, marginBottom: 16 }}>
           {days.map(d => {
             const total = getDayTotal(d);
             const hasData = total > 0;
             const over = total > dailyBudget;
             const isActive = d.day === activeDay;
             return (
-              <button key={d.day} onClick={() => setActiveDay(d.day)} style={{
+              <button key={d.day} className={`day-tab${isActive ? " day-tab--active" : ""}${over && hasData ? " day-tab--over" : ""}`} onClick={() => setActiveDay(d.day)} style={{
                 padding: "7px 0", borderRadius: 8, cursor: "pointer",
                 background: isActive ? "#F0EDE6" : hasData ? (over ? "#2A1818" : "#141A16") : "#1A1814",
                 border: isActive ? "none" : `1px solid ${over && hasData ? "#3A2020" : "#2A2822"}`,
                 display: "flex", flexDirection: "column", alignItems: "center", gap: 3, transition: "all 0.15s",
               }}>
-                <span style={{ fontSize: 11, color: isActive ? "#0F0E0C" : "#8A8070", fontFamily: "monospace" }}>{d.day}</span>
-                {hasData && <div style={{ width: 4, height: 4, borderRadius: "50%", background: isActive ? "#0F0E0C" : over ? "#E06060" : "#6DB88A" }} />}
+                <span className="day-tab-num" style={{ fontSize: 11, color: isActive ? "#0F0E0C" : "#8A8070", fontFamily: "monospace" }}>{d.day}</span>
+                {hasData && <div className="day-tab-dot" style={{ width: 4, height: 4, borderRadius: "50%", background: isActive ? "#0F0E0C" : over ? "#E06060" : "#6DB88A" }} />}
               </button>
             );
           })}
         </div>
 
         {/* Day panel */}
-        <div style={{ background: "#1A1814", border: "1px solid #2A2822", borderRadius: 16, padding: "16px", marginBottom: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <h2 style={{ margin: 0, fontSize: 17, fontWeight: "normal" }}>
+        <div className="day-panel" style={{ background: "#1A1814", border: "1px solid #2A2822", borderRadius: 16, padding: "16px", marginBottom: 12 }}>
+          <div className="day-panel-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h2 className="day-panel-title" style={{ margin: 0, fontSize: 17, fontWeight: "normal" }}>
               Day {activeDay}
-              <span style={{ fontSize: 12, color: "#8A8070", marginLeft: 8 }}>/ {sym}{dailyBudget.toLocaleString()} {t.budgetLabel}</span>
+              <span className="day-panel-budget-label" style={{ fontSize: 12, color: "#8A8070", marginLeft: 8 }}>/ {sym}{dailyBudget.toLocaleString()} {t.budgetLabel}</span>
             </h2>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="day-panel-actions" style={{ display: "flex", alignItems: "center", gap: 10 }}>
               {!isTotal && (
-                <button onClick={() => setShowEditor(true)} style={{ fontSize: 11, color: "#8A8070", background: "none", border: "1px solid #2A2822", borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "'Noto Sans KR', sans-serif" }}>
+                <button className="btn-edit-cats" onClick={() => setShowEditor(true)} style={{ fontSize: 11, color: "#8A8070", background: "none", border: "1px solid #2A2822", borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "'Noto Sans KR', sans-serif" }}>
                   {t.editCats}
                 </button>
               )}
-              <span style={{ fontSize: 19, fontWeight: "bold", color: activeDayTotal > dailyBudget ? "#E06060" : activeDayTotal > 0 ? "#F0EDE6" : "#4A4840" }}>
-                {activeDayTotal > 0 ? activeDayTotal.toLocaleString() : "—"}<span style={{ fontSize: 12, color: "#8A8070" }}>{sym}</span>
+              <span className="day-panel-total" style={{ fontSize: 19, fontWeight: "bold", color: activeDayTotal > dailyBudget ? "#E06060" : activeDayTotal > 0 ? "#F0EDE6" : "#4A4840" }}>
+                {activeDayTotal > 0 ? activeDayTotal.toLocaleString() : "—"}<span className="day-panel-total-sym" style={{ fontSize: 12, color: "#8A8070" }}>{sym}</span>
               </span>
             </div>
           </div>
 
           {isTotal ? (
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#0F0E0C", borderRadius: 12, padding: "16px 20px", border: "1px solid #2A2822" }}>
-                <span style={{ fontSize: 22 }}>💳</span>
-                <input type="number" placeholder="0"
+            <div className="day-input-total-wrap" style={{ marginBottom: 14 }}>
+              <div className="day-input-total" style={{ display: "flex", alignItems: "center", gap: 10, background: "#0F0E0C", borderRadius: 12, padding: "16px 20px", border: "1px solid #2A2822" }}>
+                <span className="day-input-total-icon" style={{ fontSize: 22 }}>💳</span>
+                <input className="day-input-total-field" type="number" placeholder="0"
                   value={activeDayData["total"] || ""}
                   onChange={e => updateDay(activeDay, "total", e.target.value)}
                   style={{ flex: 1, background: "transparent", border: "none", borderBottom: `1px solid ${activeDayData["total"] ? "#7EB5D6" : "#2A2822"}`, color: "#F0EDE6", fontSize: 32, fontFamily: "monospace", padding: "4px 0", outline: "none", minWidth: 0 }}
                 />
-                <span style={{ fontSize: 16, color: "#4A4840" }}>{sym}</span>
+                <span className="day-input-total-sym" style={{ fontSize: 16, color: "#4A4840" }}>{sym}</span>
               </div>
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: cats.length === 1 ? "1fr" : "1fr 1fr", gap: 10, marginBottom: 14 }}>
+            <div className="day-input-grid" style={{ display: "grid", gridTemplateColumns: cats.length === 1 ? "1fr" : "1fr 1fr", gridAutoRows: 180, gap: 10, marginBottom: 14 }}>
               {cats.map(cat => {
                 const catBudget = cat.budget ? parseFloat(cat.budget) : null;
-                const catSpent = days.reduce((s, d) => s + (parseFloat(d[cat.id]) || 0), 0);
-                const todaySpent = parseFloat(activeDayData[cat.id]) || 0;
+                const todayItems = getCatItems(activeDayData, cat.id);
+                const todaySpent = getCatTotal(activeDayData, cat.id);
                 const catOver = catBudget !== null && todaySpent > catBudget;
+                const isExpanded = expandedCats.has(cat.id);
                 return (
-                  <div key={cat.id} style={{ background: "#0F0E0C", borderRadius: 10, padding: "11px", border: `1px solid ${catOver ? "#3A2020" : "#2A2822"}` }}>
-                    {/* Label + budget badge */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <span style={{ fontSize: 12, color: "#8A8070" }}>{cat.label}</span>
-                      {catBudget !== null && (
-                        <span style={{ fontSize: 10, color: catOver ? "#E06060" : "#6A6050", fontFamily: "monospace" }}>
-                          {fmtCompact(catBudget)}{sym}
-                        </span>
-                      )}
+                  <div key={cat.id} className={`cat-card${catOver ? " cat-card--over" : ""}${isExpanded ? " cat-card--expanded" : ""}`} style={{ position: "relative", background: "#0F0E0C", borderRadius: 10, padding: "11px", border: `1px solid ${catOver ? "#3A2020" : "#2A2822"}`, display: "flex", flexDirection: "column", gap: 8, overflow: "hidden" }}>
+                    {/* Label + budget badge + expand toggle */}
+                    <div className="cat-card-header" style={{ flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span className="cat-card-label" style={{ fontSize: 12, color: "#8A8070" }}>{cat.label}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        {catBudget !== null && (
+                          <span className="cat-card-budget" style={{ fontSize: 10, color: catOver ? "#E06060" : "#6A6050", fontFamily: "monospace" }}>
+                            {fmtCompact(catBudget)}{sym}
+                          </span>
+                        )}
+                        <button
+                          className="cat-card-toggle"
+                          onClick={() => setExpandedCats(prev => {
+                            const next = new Set(prev);
+                            if (next.has(cat.id)) next.delete(cat.id); else next.add(cat.id);
+                            return next;
+                          })}
+                          style={{ background: "none", border: "none", color: isExpanded ? "#7EB5D6" : "#4A4840", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: "0 0 0 4px", flexShrink: 0 }}
+                        >{isExpanded ? "∧" : "∨"}</button>
+                      </div>
                     </div>
-                    {/* Mini progress bar if budget set */}
+                    {/* Quick-add row — always visible, above total */}
+                    {(() => {
+                      const qa = quickAddState[cat.id] || { label: "", amount: "" };
+                      return (
+                        <div className="cat-card-quickadd" style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                          <input
+                            className="quickadd-label"
+                            type="text"
+                            placeholder="내역"
+                            value={qa.label}
+                            onChange={e => setQuickAddState(prev => ({ ...prev, [cat.id]: { ...(prev[cat.id] || {}), label: e.target.value } }))}
+                            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleQuickAdd(cat.id); } }}
+                            style={{ flex: 1, background: "transparent", border: "none", borderBottom: "1px solid #2A2822", color: "#C0B8A8", fontSize: 12, fontFamily: "'Noto Sans KR', sans-serif", padding: "2px 0", outline: "none", minWidth: 0 }}
+                          />
+                          <input
+                            className="quickadd-amount"
+                            type="number"
+                            placeholder="0"
+                            value={qa.amount}
+                            onChange={e => setQuickAddState(prev => ({ ...prev, [cat.id]: { ...(prev[cat.id] || {}), amount: e.target.value } }))}
+                            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleQuickAdd(cat.id); } }}
+                            style={{ width: 52, background: "transparent", border: "none", borderBottom: `1px solid ${qa.amount ? cat.color : "#2A2822"}`, color: "#F0EDE6", fontSize: 13, fontFamily: "monospace", padding: "2px 0", outline: "none", textAlign: "right" }}
+                          />
+                        </div>
+                      );
+                    })()}
+                    {/* Spacer — pushes progress + total to bottom */}
+                    <div style={{ flex: 1 }} />
+                    {/* Mini progress bar — just above total */}
                     {catBudget !== null && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 8 }}>
-                        <div style={{ flex: 1, height: 2, background: "#1E1C18", borderRadius: 2, overflow: "hidden" }}>
-                          <div style={{
+                      <div className="cat-card-progress-wrap" style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
+                        <div className="cat-card-progress-track" style={{ flex: 1, height: 2, background: "#1E1C18", borderRadius: 2, overflow: "hidden" }}>
+                          <div className="cat-card-progress-fill" style={{
                             height: "100%", borderRadius: 2,
                             width: `${Math.min((todaySpent / catBudget) * 100, 100)}%`,
                             background: catOver ? "#E06060" : cat.color,
                             transition: "width 0.3s ease",
                           }} />
                         </div>
-                        <span style={{ fontSize: 12, color: "transparent", fontFamily: "monospace" }}>€</span>
                       </div>
                     )}
-                    {/* Amount input */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <input type="number" placeholder="0"
-                        value={activeDayData[cat.id] || ""}
-                        onChange={e => updateDay(activeDay, cat.id, e.target.value)}
-                        style={{ width: "100%", background: "transparent", border: "none", borderBottom: `1px solid ${activeDayData[cat.id] ? cat.color : "#2A2822"}`, color: "#F0EDE6", fontSize: 20, fontFamily: "monospace", padding: "2px 0", outline: "none" }}
-                      />
-                      <span style={{ fontSize: 12, color: "#4A4840" }}>{sym}</span>
+                    {/* Total display */}
+                    <div className="cat-card-input" style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                      <span className="cat-card-field" style={{ flex: 1, color: todaySpent > 0 ? "#F0EDE6" : "#4A4840", fontSize: 20, fontFamily: "monospace" }}>
+                        {todaySpent > 0 ? todaySpent.toLocaleString() : "—"}
+                      </span>
+                      <span className="cat-card-sym" style={{ fontSize: 12, color: "#4A4840" }}>{sym}</span>
                     </div>
+                    {/* Items overlay — absolute, covers full card when expanded */}
+                    {isExpanded && (
+                      <div className="cat-card-items" style={{ position: "absolute", inset: 0, zIndex: 5, background: "#0F0E0C", borderRadius: 10, border: `1px solid ${cat.color}44`, padding: "11px", display: "flex", flexDirection: "column", gap: 8, overflowY: "auto" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+                          <span style={{ fontSize: 12, color: cat.color, fontWeight: "bold" }}>{cat.label}</span>
+                          <button
+                            onClick={() => setExpandedCats(prev => { const next = new Set(prev); next.delete(cat.id); return next; })}
+                            style={{ background: "none", border: "none", color: "#7EB5D6", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}
+                          >∧</button>
+                        </div>
+                        {todayItems.map(item => (
+                          <div key={item.id} className="cat-item" style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                            <input
+                              className="cat-item-label"
+                              type="text"
+                              placeholder="내역"
+                              value={item.label}
+                              onChange={e => updateCatItem(activeDay, cat.id, item.id, "label", e.target.value)}
+                              style={{ flex: 1, background: "transparent", border: "none", borderBottom: "1px solid #2A2822", color: "#C0B8A8", fontSize: 12, fontFamily: "'Noto Sans KR', sans-serif", padding: "2px 0", outline: "none", minWidth: 0 }}
+                            />
+                            <input
+                              className="cat-item-amount"
+                              type="number"
+                              placeholder="0"
+                              value={item.amount}
+                              onChange={e => updateCatItem(activeDay, cat.id, item.id, "amount", e.target.value)}
+                              style={{ width: 52, background: "transparent", border: "none", borderBottom: `1px solid ${item.amount ? cat.color : "#2A2822"}`, color: "#F0EDE6", fontSize: 13, fontFamily: "monospace", padding: "2px 0", outline: "none", textAlign: "right" }}
+                            />
+                            <button
+                              className="cat-item-delete"
+                              onClick={() => removeCatItem(activeDay, cat.id, item.id)}
+                              style={{ background: "none", border: "none", color: "#4A4840", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: "0 0 0 2px", flexShrink: 0 }}
+                            >×</button>
+                          </div>
+                        ))}
+                        {todayItems.length === 0 && (
+                          <span style={{ fontSize: 11, color: "#3A3830", fontFamily: "'Noto Sans KR', sans-serif" }}>아직 내역이 없어요</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
 
-          <input type="text" placeholder={t.memo} value={activeDayData.note}
+          <input className="day-memo" type="text" placeholder={t.memo} value={activeDayData.note}
             onChange={e => updateDay(activeDay, "note", e.target.value)}
             style={{ width: "100%", background: "#0F0E0C", border: "1px solid #2A2822", borderRadius: 8, color: "#8A8070", fontSize: 13, padding: "10px 12px", outline: "none", boxSizing: "border-box", fontFamily: "'Noto Sans KR', sans-serif" }}
           />
         </div>
 
         {/* Summary */}
-        <div style={{ background: "#1A1814", border: "1px solid #2A2822", borderRadius: 12, overflow: "hidden" }}>
+        <div className="summary-table" style={{ background: "#1A1814", border: "1px solid #2A2822", borderRadius: 12, overflow: "hidden" }}>
           {/* Header: label row */}
-          <div style={{ display: "flex", alignItems: "center", padding: "7px 10px", borderBottom: "1px solid #2A2822", gap: 3, background: "#141210" }}>
+          <div className="summary-header" style={{ display: "flex", alignItems: "center", padding: "7px 10px", borderBottom: "1px solid #2A2822", gap: 3, background: "#141210" }}>
             <span style={{ width: "auto", flexShrink: 0, paddingRight: 4 }} />
             {showCatCols && (
-              <div style={{ flex: 1, display: "flex", gap: 3 }}>
+              <div className="summary-cat-cols" style={{ flex: 1, display: "flex", gap: 3 }}>
                 {cats.map(cat => (
-                  <span key={cat.id} style={{ flex: 1, fontSize: cats.length >= 6 ? 9 : 10, color: cat.color, textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "0.02em" }}>
+                  <span key={cat.id} className="summary-cat-col-label" style={{ flex: 1, fontSize: cats.length >= 6 ? 9 : 10, color: cat.color, textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "0.02em" }}>
                     {cat.label}
                   </span>
                 ))}
               </div>
             )}
-            <span style={{ fontSize: 9, color: "#8A8070", width: 40, textAlign: "right", flexShrink: 0, letterSpacing: "0.05em" }}>{t.total}</span>
-            <span style={{ fontSize: 9, color: "#6A6050", width: 40, textAlign: "right", flexShrink: 0, letterSpacing: "0.05em" }}>{t.cumulativeDelta}</span>
+            <span className="summary-col-total" style={{ fontSize: 9, color: "#8A8070", width: 40, textAlign: "right", flexShrink: 0, letterSpacing: "0.05em" }}>{t.total}</span>
+            <span className="summary-col-delta" style={{ fontSize: 9, color: "#6A6050", width: 40, textAlign: "right", flexShrink: 0, letterSpacing: "0.05em" }}>{t.cumulativeDelta}</span>
           </div>
           {/* Day rows */}
           {days.map(d => {
@@ -1057,62 +1188,62 @@ function Tracker({ config, onReset, onHardReset }) {
             const diff = dailyBudget * d.day - cum;
             const hasData = total > 0;
             return (
-              <div key={d.day} onClick={() => setActiveDay(d.day)} style={{ display: "flex", alignItems: "center", padding: "6px 10px", borderBottom: "1px solid #1E1C18", cursor: "pointer", background: activeDay === d.day ? "#201E1A" : "transparent", transition: "background 0.1s", gap: 3 }}>
-                <span style={{ fontSize: 11, color: "#4A4840", fontFamily: "monospace", flexShrink: 0, paddingRight: 4 }}>D{d.day}</span>
+              <div key={d.day} className={`summary-row${activeDay === d.day ? " summary-row--active" : ""}`} onClick={() => setActiveDay(d.day)} style={{ display: "flex", alignItems: "center", padding: "6px 10px", borderBottom: "1px solid #1E1C18", cursor: "pointer", background: activeDay === d.day ? "#201E1A" : "transparent", transition: "background 0.1s", gap: 3 }}>
+                <span className="summary-row-day" style={{ fontSize: 11, color: "#4A4840", fontFamily: "monospace", flexShrink: 0, paddingRight: 4 }}>D{d.day}</span>
                 {showCatCols && (
-                  <div style={{ flex: 1, display: "flex", gap: 3 }}>
+                  <div className="summary-row-cats" style={{ flex: 1, display: "flex", gap: 3 }}>
                     {cats.map(cat => {
-                      const val = parseFloat(d[cat.id]) || 0;
+                      const val = getCatTotal(d, cat.id);
                       return (
-                        <span key={cat.id} style={{ flex: 1, fontSize: cats.length >= 6 ? 10 : 11, fontFamily: "monospace", color: val > 0 ? "#C0B8A8" : "#2A2822", textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <span key={cat.id} className="summary-row-cat-val" style={{ flex: 1, fontSize: cats.length >= 6 ? 10 : 11, fontFamily: "monospace", color: val > 0 ? "#C0B8A8" : "#2A2822", textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {fmtCompact(val)}
                         </span>
                       );
                     })}
                   </div>
                 )}
-                {!showCatCols && <div style={{ flex: 1 }} />}
-                <span style={{ fontSize: cats.length >= 6 ? 11 : 12, fontFamily: "monospace", fontWeight: hasData ? "bold" : "normal", color: hasData ? "#F0EDE6" : "#3A3830", width: 40, textAlign: "right", flexShrink: 0 }}>
+                {!showCatCols && <div className="summary-row-spacer" style={{ flex: 1 }} />}
+                <span className="summary-row-total" style={{ fontSize: cats.length >= 6 ? 11 : 12, fontFamily: "monospace", fontWeight: hasData ? "bold" : "normal", color: hasData ? "#F0EDE6" : "#3A3830", width: 40, textAlign: "right", flexShrink: 0 }}>
                   {hasData ? fmtCompact(total) : "—"}
                 </span>
-                <span style={{ fontSize: 10, fontFamily: "monospace", color: hasData ? (diff >= 0 ? "#6DB88A" : "#E06060") : "transparent", width: 40, textAlign: "right", flexShrink: 0 }}>
+                <span className="summary-row-delta" style={{ fontSize: 10, fontFamily: "monospace", color: hasData ? (diff >= 0 ? "#6DB88A" : "#E06060") : "transparent", width: 40, textAlign: "right", flexShrink: 0 }}>
                   {hasData ? `${diff >= 0 ? "+" : ""}${fmtCompact(Math.abs(diff))}` : "·"}
                 </span>
               </div>
             );
           })}
           {/* Footer: per-cat totals + grand total */}
-          <div style={{ display: "flex", alignItems: "center", padding: "7px 10px", borderTop: "1px solid #2A2822", gap: 3, background: "#141210" }}>
-            <span style={{ fontSize: 10, color: "#6A6050", flexShrink: 0, paddingRight: 4 }}>{t.total}</span>
+          <div className="summary-footer" style={{ display: "flex", alignItems: "center", padding: "7px 10px", borderTop: "1px solid #2A2822", gap: 3, background: "#141210" }}>
+            <span className="summary-footer-label" style={{ fontSize: 10, color: "#6A6050", flexShrink: 0, paddingRight: 4 }}>{t.total}</span>
             {showCatCols && (
-              <div style={{ flex: 1, display: "flex", gap: 3 }}>
+              <div className="summary-footer-cats" style={{ flex: 1, display: "flex", gap: 3 }}>
                 {cats.map(cat => {
-                  const catTotal = days.reduce((s, d) => s + (parseFloat(d[cat.id]) || 0), 0);
+                  const catTotal = days.reduce((s, d) => s + getCatTotal(d, cat.id), 0);
                   return (
-                    <span key={cat.id} style={{ flex: 1, fontSize: cats.length >= 6 ? 10 : 11, fontFamily: "monospace", color: catTotal > 0 ? cat.color : "#3A3830", textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span key={cat.id} className="summary-footer-cat-total" style={{ flex: 1, fontSize: cats.length >= 6 ? 10 : 11, fontFamily: "monospace", color: catTotal > 0 ? cat.color : "#3A3830", textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {fmtCompact(catTotal)}
                     </span>
                   );
                 })}
               </div>
             )}
-            {!showCatCols && <div style={{ flex: 1 }} />}
-            <span style={{ fontSize: 12, fontFamily: "monospace", fontWeight: "bold", color: totalSpent > TOTAL_BUDGET ? "#E06060" : "#6DB88A", width: 40, textAlign: "right", flexShrink: 0 }}>
+            {!showCatCols && <div className="summary-footer-spacer" style={{ flex: 1 }} />}
+            <span className="summary-footer-grand-total" style={{ fontSize: 12, fontFamily: "monospace", fontWeight: "bold", color: totalSpent > TOTAL_BUDGET ? "#E06060" : "#6DB88A", width: 40, textAlign: "right", flexShrink: 0 }}>
               {fmtCompact(totalSpent)}
             </span>
-            <span style={{ fontSize: 10, color: "#4A4840", width: 40, textAlign: "right", flexShrink: 0 }}>
+            <span className="summary-footer-budget" style={{ fontSize: 10, color: "#4A4840", width: 40, textAlign: "right", flexShrink: 0 }}>
               /{TOTAL_BUDGET.toLocaleString()}
             </span>
           </div>
         </div>
 
-        <p style={{ textAlign: "center", fontSize: 11, color: "#3A3830", marginTop: 18, letterSpacing: "0.08em" }}>
+        <p className="daily-goal-text" style={{ textAlign: "center", fontSize: 11, color: "#3A3830", marginTop: 18, letterSpacing: "0.08em" }}>
           {t.dailyGoal(sym, dailyBudget.toLocaleString(), tripDays)}
         </p>
 
         {/* Reset button */}
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 20 }}>
-          <button onClick={() => setShowResetConfirm(true)} style={{
+        <div className="reset-btn-wrap" style={{ display: "flex", justifyContent: "center", marginTop: 20 }}>
+          <button className="btn-hard-reset" onClick={() => setShowResetConfirm(true)} style={{
             background: "none", border: "1px solid #2A2822", borderRadius: 10,
             color: "#4A4840", fontSize: 12, fontFamily: "'Noto Sans KR', sans-serif",
             padding: "10px 24px", cursor: "pointer", letterSpacing: "0.05em",
@@ -1124,7 +1255,7 @@ function Tracker({ config, onReset, onHardReset }) {
           </button>
         </div>
 
-        <p style={{ textAlign: "center", fontSize: 10, color: "#2A2820", marginTop: 16, letterSpacing: "0.05em" }}>
+        <p className="app-copyright" style={{ textAlign: "center", fontSize: 10, color: "#2A2820", marginTop: 16, letterSpacing: "0.05em" }}>
           © 이 앱의 소유권은 @minorimaiori에게 있습니다
         </p>
       </div>
@@ -1184,7 +1315,7 @@ export default function App() {
   };
 
   if (loading) return (
-    <div style={{ minHeight: "100vh", background: "#0F0E0C", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div className="app-loading" style={{ minHeight: "100vh", background: "#0F0E0C", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <span style={{ color: "#4A4840", fontSize: 13, fontFamily: "'Noto Sans KR', sans-serif" }}>{T["ko"].loading}</span>
     </div>
   );
@@ -1193,8 +1324,8 @@ export default function App() {
     <>
       {/* First-visit notice modal */}
       {showNotice && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.82)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: "#1A1814", borderRadius: 20, padding: "28px 24px", maxWidth: 340, width: "100%", border: "1px solid #2A2822" }}>
+        <div className="notice-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.82)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div className="notice-modal" style={{ background: "#1A1814", borderRadius: 20, padding: "28px 24px", maxWidth: 340, width: "100%", border: "1px solid #2A2822" }}>
             <p style={{ fontSize: 18, fontWeight: 700, margin: "0 0 12px", textAlign: "center", letterSpacing: "-0.02em", color: "#F0EDE6" }}>
               👀 이 앱, 이렇게 쓰세요!
             </p>

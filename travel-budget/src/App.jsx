@@ -1371,10 +1371,12 @@ export default function App() {
         <div className="notice-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.82)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div className="notice-modal" style={{ background: "#1A1814", borderRadius: 20, padding: "28px 24px", maxWidth: 340, width: "100%", border: "1px solid #2A2822" }}>
             <p style={{ fontSize: 18, fontWeight: 700, margin: "0 0 12px", textAlign: "center", letterSpacing: "-0.02em", color: "#F0EDE6" }}>
-              👀 이 앱, 이렇게 쓰세요!
+              예산에 맞게, 실시간으로
             </p>
-            <p style={{ fontSize: 14, color: "#A09880", margin: "0 0 20px", lineHeight: 1.8, textAlign: "center" }}>
-              그룹에서 총무 한 명이 매일 지출을 기록하고, 저녁에 캡처해서 공유해보세요 📸
+            <p style={{ fontSize: 14, color: "#A09880", margin: "0 0 20px", lineHeight: 1.9, textAlign: "center" }}>
+              지출이 생길 때마다 바로 기록하세요.<br />
+              카테고리별 합계와 누적 금액이 자동으로 계산돼, 오늘 예산이 얼마나 남았는지 즉시 확인할 수 있어요.<br />
+              어제 더 썼다면 오늘 조금 아끼면 됩니다 📊
             </p>
             <div style={{ borderTop: "1px solid #2A2822", paddingTop: 16, marginBottom: 24 }}>
               <p style={{ fontSize: 14, color: "#6A6050", margin: 0, lineHeight: 1.9, textAlign: "center" }}>

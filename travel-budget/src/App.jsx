@@ -1374,7 +1374,6 @@ export default function App() {
               예산에 맞게, 실시간으로
             </p>
             <p style={{ fontSize: 14, color: "#A09880", margin: "0 0 20px", lineHeight: 1.9, textAlign: "center" }}>
-              지출이 생길 때마다 바로 기록하세요.<br />
               카테고리별 합계와 누적 금액이 자동으로 계산돼, 오늘 예산이 얼마나 남았는지 즉시 확인할 수 있어요.<br />
               어제 더 썼다면 오늘 조금 아끼면 됩니다 📊
             </p>

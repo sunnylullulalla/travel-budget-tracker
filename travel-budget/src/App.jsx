@@ -1062,25 +1062,14 @@ function Tracker({ config, onReset, onHardReset }) {
                 const isExpanded = expandedCats.has(cat.id);
                 return (
                   <div key={cat.id} className={`cat-card${catOver ? " cat-card--over" : ""}${isExpanded ? " cat-card--expanded" : ""}`} style={{ position: "relative", background: "#0F0E0C", borderRadius: 10, padding: "11px", border: `1px solid ${catOver ? "#3A2020" : "#2A2822"}`, display: "flex", flexDirection: "column", gap: 8, overflow: "hidden" }}>
-                    {/* Label + budget badge + expand toggle */}
+                    {/* Label + budget badge */}
                     <div className="cat-card-header" style={{ flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span className="cat-card-label" style={{ fontSize: 12, color: "#8A8070" }}>{cat.label}</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                        {catBudget !== null && (
-                          <span className="cat-card-budget" style={{ fontSize: 10, color: catOver ? "#E06060" : "#6A6050", fontFamily: "monospace" }}>
-                            {fmtCompact(catBudget)}{sym}
-                          </span>
-                        )}
-                        <button
-                          className="cat-card-toggle"
-                          onClick={() => setExpandedCats(prev => {
-                            const next = new Set(prev);
-                            if (next.has(cat.id)) next.delete(cat.id); else next.add(cat.id);
-                            return next;
-                          })}
-                          style={{ background: "none", border: "none", color: isExpanded ? "#7EB5D6" : "#4A4840", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: "0 0 0 4px", flexShrink: 0 }}
-                        >{isExpanded ? "∧" : "∨"}</button>
-                      </div>
+                      {catBudget !== null && (
+                        <span className="cat-card-budget" style={{ fontSize: 10, color: catOver ? "#E06060" : "#6A6050", fontFamily: "monospace" }}>
+                          {fmtCompact(catBudget)}{sym}
+                        </span>
+                      )}
                     </div>
                     {/* Quick-add: 내역(위) → 금액+버튼(아래) */}
                     {(() => {
@@ -1129,12 +1118,25 @@ function Tracker({ config, onReset, onHardReset }) {
                         </div>
                       </div>
                     )}
-                    {/* Total display */}
-                    <div className="cat-card-input" style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                    {/* Total row — 항목 있을 때 전체가 탭 트리거 */}
+                    <div
+                      className="cat-card-input"
+                      onClick={todayItems.length > 0 ? () => setExpandedCats(prev => {
+                        const next = new Set(prev);
+                        if (next.has(cat.id)) next.delete(cat.id); else next.add(cat.id);
+                        return next;
+                      }) : undefined}
+                      style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 4, padding: "5px 0", margin: "-5px 0 -3px", cursor: todayItems.length > 0 ? "pointer" : "default" }}
+                    >
                       <span className="cat-card-field" style={{ flex: 1, color: todaySpent > 0 ? "#F0EDE6" : "#4A4840", fontSize: 20, fontFamily: "monospace" }}>
                         {todaySpent > 0 ? todaySpent.toLocaleString() : "—"}
                       </span>
                       <span className="cat-card-sym" style={{ fontSize: 12, color: "#4A4840" }}>{sym}</span>
+                      {todayItems.length > 0 && (
+                        <span style={{ fontSize: 10, color: isExpanded ? "#7EB5D6" : "#6A6050", fontFamily: "'Noto Sans KR', sans-serif", marginLeft: 4 }}>
+                          {todayItems.length}개 {isExpanded ? "∧" : "›"}
+                        </span>
+                      )}
                     </div>
                     {/* Items overlay — absolute, covers full card when expanded */}
                     {isExpanded && (
@@ -1143,8 +1145,8 @@ function Tracker({ config, onReset, onHardReset }) {
                           <span style={{ fontSize: 12, color: cat.color, fontWeight: "bold" }}>{cat.label}</span>
                           <button
                             onClick={() => setExpandedCats(prev => { const next = new Set(prev); next.delete(cat.id); return next; })}
-                            style={{ background: "none", border: "none", color: "#7EB5D6", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}
-                          >∧</button>
+                            style={{ background: "#0A1820", border: `1px solid ${cat.color}66`, borderRadius: 10, color: cat.color, cursor: "pointer", fontSize: 11, fontFamily: "'Noto Sans KR', sans-serif", padding: "3px 10px", lineHeight: 1.4 }}
+                          >닫기</button>
                         </div>
                         {todayItems.map(item => (
                           <div key={item.id} className="cat-item" style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>

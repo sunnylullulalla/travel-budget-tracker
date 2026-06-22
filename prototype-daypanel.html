@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Day Panel UX Prototype</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0F0E0C;
+      color: #F0EDE6;
+      font-family: 'Noto Sans KR', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Toggle bar ── */
+    .toggle-bar {
+      display: flex;
+      background: #141210;
+      border-bottom: 1px solid #2A2822;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .toggle-btn {
+      flex: 1;
+      padding: 13px;
+      background: none;
+      border: none;
+      color: #6A6050;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .toggle-btn.active { color: #F0EDE6; border-bottom-color: #7EB5D6; }
+
+    /* ── Sections ── */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .panel-wrap {
+      padding: 16px;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    /* ── Day panel shell ── */
+    .day-panel {
+      background: #1A1814;
+      border: 1px solid #2A2822;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .day-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .day-title { font-size: 17px; font-weight: normal; }
+    .day-budget-label { font-size: 12px; color: #8A8070; margin-left: 8px; }
+    .day-total-display { font-size: 19px; font-weight: bold; }
+    .day-total-sym { font-size: 12px; color: #8A8070; }
+
+    /* ── BEFORE grid ── */
+    .cat-grid-before {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-auto-rows: 180px; /* fixed height — problem */
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    /* ── AFTER grid ── */
+    .cat-grid-after {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    /* ── Shared card ── */
+    .cat-card {
+      background: #0F0E0C;
+      border-radius: 10px;
+      padding: 11px;
+      border: 1px solid #2A2822;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      overflow: hidden;
+      position: relative;
+      transition: border-color 0.2s;
+    }
+    .cat-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .cat-label { font-size: 12px; }
+    .cat-budget-badge { font-size: 10px; color: #6A6050; font-family: monospace; }
+    .cat-toggle-btn {
+      background: none; border: none; color: #4A4840;
+      cursor: pointer; font-size: 13px; padding: 0 0 0 4px; line-height: 1;
+    }
+
+    /* ── BEFORE inputs ── */
+    .quickadd-row-before {
+      display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+    }
+    .input-desc-before {
+      flex: 1;
+      background: transparent; border: none;
+      border-bottom: 1px solid #2A2822;
+      color: #C0B8A8; font-size: 12px;
+      font-family: 'Noto Sans KR', sans-serif;
+      padding: 2px 0; outline: none; min-width: 0;
+    }
+    .input-amount-before {
+      width: 52px; /* ← 문제: 너무 좁음 */
+      background: transparent; border: none;
+      border-bottom: 1px solid #2A2822;
+      color: #F0EDE6; font-size: 13px; font-family: monospace;
+      padding: 2px 0; outline: none; text-align: right;
+    }
+
+    /* ── AFTER inputs ── */
+    .quickadd-row-after {
+      display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+    }
+    .input-amount-after {
+      flex: 1; /* ← 넓게 */
+      background: transparent; border: none;
+      border-bottom: 1px solid #2A2822;
+      color: #F0EDE6; font-size: 17px; font-family: monospace;
+      padding: 4px 0; outline: none; text-align: right; min-width: 0;
+      transition: border-bottom-color 0.15s;
+    }
+    .input-sym { font-size: 12px; color: #6A6050; flex-shrink: 0; }
+    .btn-add {
+      background: none; border: 1px solid #3A3830; border-radius: 6px;
+      color: #8A8070; font-size: 18px; cursor: pointer;
+      padding: 1px 9px; flex-shrink: 0; line-height: 1.4;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-add:active { background: #1A2820; border-color: #6DB88A; color: #6DB88A; }
+
+    .input-desc-after {
+      width: 100%; flex-shrink: 0;
+      background: transparent; border: none;
+      border-bottom: 1px solid #2A2822;
+      color: #C0B8A8; font-size: 12px;
+      font-family: 'Noto Sans KR', sans-serif;
+      padding: 4px 0; outline: none;
+      transition: border-bottom-color 0.15s;
+    }
+
+    @keyframes field-shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-3px); }
+      40%, 80% { transform: translateX(3px); }
+    }
+    .field-error {
+      animation: field-shake 0.25s ease;
+      border-bottom-color: #E06060 !important;
+    }
+
+    /* ── Progress bars ── */
+    .progress-track {
+      width: 100%; background: #1E1C18; border-radius: 3px; overflow: hidden;
+      flex-shrink: 0;
+    }
+    .progress-track-before { height: 2px; }  /* 얇음 */
+    .progress-track-after  { height: 5px; }  /* 개선 */
+    .progress-fill {
+      height: 100%; border-radius: inherit;
+      transition: width 0.3s ease, background-color 0.3s;
+    }
+
+    /* ── Total display ── */
+    .spacer { flex: 1; }
+    .cat-total-row { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .cat-total-num {
+      flex: 1; font-size: 20px; font-family: monospace;
+      color: #4A4840;
+    }
+    .cat-total-num.has-data { color: #F0EDE6; }
+    .cat-total-sym { font-size: 12px; color: #4A4840; }
+
+    /* ── Flash animation ── */
+    @keyframes card-flash {
+      0%   { background: #0F0E0C; border-color: #2A2822; }
+      25%  { background: #0D2018; border-color: #3A5040; }
+      100% { background: #0F0E0C; border-color: #2A2822; }
+    }
+    .cat-card.flash { animation: card-flash 0.45s ease; }
+
+    /* ── Day tabs (for swipe demo) ── */
+    .day-tabs {
+      display: flex; overflow-x: auto; gap: 6px;
+      padding-bottom: 2px; margin-bottom: 12px;
+      scrollbar-width: none;
+    }
+    .day-tabs::-webkit-scrollbar { display: none; }
+    .day-tab {
+      flex-shrink: 0; width: 38px; height: 38px;
+      border-radius: 10px; border: 1px solid #2A2822;
+      background: #1A1814; color: #4A4840;
+      font-size: 12px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-family: monospace; position: relative;
+      transition: background 0.15s, color 0.15s;
+    }
+    .day-tab.active {
+      background: #F0EDE6; color: #0F0E0C; font-weight: bold;
+      border-color: #F0EDE6;
+    }
+    .day-tab.has-data { color: #8A8070; }
+    .tab-dot {
+      position: absolute; bottom: 5px;
+      width: 4px; height: 4px; border-radius: 50%;
+    }
+    .swipe-hint {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; font-size: 11px; color: #3A3830;
+      margin: 4px 0 10px;
+    }
+    .swipe-arrow { font-size: 15px; color: #2A2822; }
+
+    /* ── Memo input ── */
+    .day-memo {
+      width: 100%; background: #0F0E0C;
+      border: 1px solid #2A2822; border-radius: 8px;
+      color: #8A8070; font-size: 13px;
+      padding: 10px 12px; outline: none;
+      font-family: 'Noto Sans KR', sans-serif;
+      margin-top: 4px;
+    }
+
+    /* ── Annotation boxes ── */
+    .annotation {
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 11px; line-height: 1.8;
+      margin-top: 4px;
+    }
+    .annotation-before {
+      background: #130F0F; border: 1px solid #3A1A1A;
+      border-left: 3px solid #E06060; color: #7A5050;
+    }
+    .annotation-after {
+      background: #0D1410; border: 1px solid #1A3A28;
+      border-left: 3px solid #6DB88A; color: #5A8070;
+    }
+    .annotation .title { font-weight: bold; margin-bottom: 4px; font-size: 12px; }
+    .annotation-before .title { color: #C06060; }
+    .annotation-after  .title { color: #6DB88A; }
+
+    .badge {
+      display: inline-block; font-size: 9px;
+      padding: 1px 5px; border-radius: 3px;
+      vertical-align: middle; margin-left: 4px;
+    }
+    .badge-new { background: #1A2820; color: #6DB88A; border: 1px solid #2A4030; }
+  </style>
+</head>
+<body>
+
+<div class="toggle-bar">
+  <button class="toggle-btn active" onclick="switchTab('before', this)">현재</button>
+  <button class="toggle-btn" onclick="switchTab('after', this)">개선안</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     BEFORE
+═══════════════════════════════════════════════ -->
+<div id="before" class="section active">
+  <div class="panel-wrap">
+
+    <!-- Day tabs -->
+    <div class="day-tabs">
+      <div class="day-tab">1</div>
+      <div class="day-tab">2</div>
+      <div class="day-tab active">3</div>
+      <div class="day-tab has-data">4<div class="tab-dot" style="background:#6DB88A"></div></div>
+      <div class="day-tab">5</div><div class="day-tab">6</div>
+      <div class="day-tab">7</div>
+    </div>
+
+    <div class="day-panel">
+      <div class="day-panel-header">
+        <h2 class="day-title">Day 3
+          <span class="day-budget-label">/ ¥12,000 예산</span>
+        </h2>
+        <span class="day-total-display" style="color:#F0EDE6">
+          2,350<span class="day-total-sym">¥</span>
+        </span>
+      </div>
+
+      <div class="cat-grid-before">
+
+        <!-- 외식 -->
+        <div class="cat-card">
+          <div class="cat-card-header">
+            <span class="cat-label" style="color:#E8845A">외식</span>
+            <div style="display:flex;align-items:center;gap:4px">
+              <span class="cat-budget-badge">6K¥</span>
+              <button class="cat-toggle-btn">∨</button>
+            </div>
+          </div>
+          <div class="quickadd-row-before">
+            <input class="input-desc-before" type="text" placeholder="내역">
+            <input class="input-amount-before" type="number" placeholder="0">
+          </div>
+          <div class="spacer"></div>
+          <div class="progress-track progress-track-before">
+            <div class="progress-fill" style="width:39%;background:#E8845A"></div>
+          </div>
+          <div class="cat-total-row">
+            <span class="cat-total-num has-data">2,350</span>
+            <span class="cat-total-sym">¥</span>
+          </div>
+        </div>
+
+        <!-- 교통 -->
+        <div class="cat-card">
+          <div class="cat-card-header">
+            <span class="cat-label" style="color:#7EB5D6">교통</span>
+            <div style="display:flex;align-items:center;gap:4px">
+              <span class="cat-budget-badge">3K¥</span>
+              <button class="cat-toggle-btn">∨</button>
+            </div>
+          </div>
+          <div class="quickadd-row-before">
+            <input class="input-desc-before" type="text" placeholder="내역">
+            <input class="input-amount-before" type="number" placeholder="0">
+          </div>
+          <div class="spacer"></div>
+          <div class="progress-track progress-track-before">
+            <div class="progress-fill" style="width:0%;background:#7EB5D6"></div>
+          </div>
+          <div class="cat-total-row">
+            <span class="cat-total-num">—</span>
+            <span class="cat-total-sym">¥</span>
+          </div>
+        </div>
+
+        <!-- 관광 -->
+        <div class="cat-card">
+          <div class="cat-card-header">
+            <span class="cat-label" style="color:#6DB88A">관광</span>
+            <div style="display:flex;align-items:center;gap:4px">
+              <span class="cat-budget-badge">2K¥</span>
+              <button class="cat-toggle-btn">∨</button>
+            </div>
+          </div>
+          <div class="quickadd-row-before">
+            <input class="input-desc-before" type="text" placeholder="내역">
+            <input class="input-amount-before" type="number" placeholder="0">
+          </div>
+          <div class="spacer"></div>
+          <div class="progress-track progress-track-before">
+            <div class="progress-fill" style="width:0%;background:#6DB88A"></div>
+          </div>
+          <div class="cat-total-row">
+            <span class="cat-total-num">—</span>
+            <span class="cat-total-sym">¥</span>
+          </div>
+        </div>
+
+        <!-- 쇼핑 -->
+        <div class="cat-card">
+          <div class="cat-card-header">
+            <span class="cat-label" style="color:#C09060">쇼핑</span>
+            <div style="display:flex;align-items:center;gap:4px">
+              <button class="cat-toggle-btn">∨</button>
+            </div>
+          </div>
+          <div class="quickadd-row-before">
+            <input class="input-desc-before" type="text" placeholder="내역">
+            <input class="input-amount-before" type="number" placeholder="0">
+          </div>
+          <div class="spacer"></div>
+          <div class="cat-total-row">
+            <span class="cat-total-num">—</span>
+            <span class="cat-total-sym">¥</span>
+          </div>
+        </div>
+
+      </div><!-- /grid -->
+
+      <input class="day-memo" type="text" placeholder="메모 (선택)">
+    </div><!-- /day-panel -->
+
+    <div class="annotation annotation-before">
+      <div class="title">문제점</div>
+      ① 금액 입력란 52px — 모바일 터치 타겟 너무 좁음<br>
+      ② 내역 입력이 항상 노출 — 빠른 금액 입력 흐름 방해<br>
+      ③ 진행 바 2px — 예산 소진 현황 눈에 잘 안 들어옴<br>
+      ④ type="number" 지정 없어 텍스트 키보드 뜰 수 있음<br>
+      ⑤ 항목 추가 후 피드백 없음
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     AFTER
+═══════════════════════════════════════════════ -->
+<div id="after" class="section">
+  <div class="panel-wrap">
+
+    <!-- Day tabs + swipe hint -->
+    <div class="day-tabs" id="day-tabs-after">
+      <div class="day-tab" onclick="selectDay(1)">1</div>
+      <div class="day-tab" onclick="selectDay(2)">2</div>
+      <div class="day-tab active" onclick="selectDay(3)">3</div>
+      <div class="day-tab has-data" onclick="selectDay(4)">4<div class="tab-dot" style="background:#6DB88A"></div></div>
+      <div class="day-tab" onclick="selectDay(5)">5</div>
+      <div class="day-tab" onclick="selectDay(6)">6</div>
+      <div class="day-tab" onclick="selectDay(7)">7</div>
+    </div>
+    <div class="swipe-hint">
+      <span class="swipe-arrow">‹</span>
+      좌우 스와이프로 날짜 이동
+      <span class="swipe-arrow">›</span>
+    </div>
+
+    <div class="day-panel" id="day-panel-after">
+      <div class="day-panel-header">
+        <h2 class="day-title">Day <span id="active-day-label">3</span>
+          <span class="day-budget-label">/ ¥12,000 예산</span>
+        </h2>
+        <span class="day-total-display" id="day-total-after" style="color:#F0EDE6">
+          2,350<span class="day-total-sym">¥</span>
+        </span>
+      </div>
+
+      <div class="cat-grid-after">
+
+        <!-- 외식 -->
+        <div class="cat-card" id="card-1">
+          <div class="cat-card-header">
+            <span class="cat-label" style="color:#E8845A">외식</span>
+            <div style="display:flex;align-items:center;gap:4px">
+              <span class="cat-budget-badge">6K¥</span>
+              <button class="cat-toggle-btn">∨</button>
+            </div>
+          </div>
+          <input class="input-desc-after" id="desc-1" type="text" placeholder="내역"
+            onkeydown="if(event.key==='Enter')document.getElementById('amt-1').focus()">
+          <div class="quickadd-row-after">
+            <input class="input-amount-after" id="amt-1"
+              type="number" inputmode="decimal" placeholder="0"
+              oninput="onAmountInput(this,'#E8845A')"
+              onkeydown="if(event.key==='Enter')doAdd(1)">
+            <span class="input-sym">¥</span>
+            <button class="btn-add" onclick="doAdd(1)">+</button>
+          </div>
+          <div class="progress-track progress-track-after">
+            <div class="progress-fill" id="prog-1" style="width:39%;background:#E8845A"></div>
+          </div>
+          <div class="cat-total-row">
+            <span class="cat-total-num has-data" id="total-1">2,350</span>
+            <span class="cat-total-sym">¥</span>
+          </div>
+        </div>
+
+        <!-- 교통 -->
+        <div class="cat-card" id="card-2">
+          <div class="cat-card-header">
+            <span class="cat-label" style="color:#7EB5D6">교통</span>
+            <div style="display:flex;align-items:center;gap:4px">
+              <span class="cat-budget-badge">3K¥</span>
+              <button class="cat-toggle-btn">∨</button>
+            </div>
+          </div>
+          <input class="input-desc-after" id="desc-2" type="text" placeholder="내역"
+            onkeydown="if(event.key==='Enter')document.getElementById('amt-2').focus()">
+          <div class="quickadd-row-after">
+            <input class="input-amount-after" id="amt-2"
+              type="number" inputmode="decimal" placeholder="0"
+              oninput="onAmountInput(this,'#7EB5D6')"
+              onkeydown="if(event.key==='Enter')doAdd(2)">
+            <span class="input-sym">¥</span>
+            <button class="btn-add" onclick="doAdd(2)">+</button>
+          </div>
+          <div class="progress-track progress-track-after">
+            <div class="progress-fill" id="prog-2" style="width:0%;background:#7EB5D6"></div>
+          </div>
+          <div class="cat-total-row">
+            <span class="cat-total-num" id="total-2">—</span>
+            <span class="cat-total-sym">¥</span>
+          </div>
+        </div>
+
+        <!-- 관광 -->
+        <div class="cat-card" id="card-3">
+          <div class="cat-card-header">
+            <span class="cat-label" style="color:#6DB88A">관광</span>
+            <div style="display:flex;align-items:center;gap:4px">
+              <span class="cat-budget-badge">2K¥</span>
+              <button class="cat-toggle-btn">∨</button>
+            </div>
+          </div>
+          <input class="input-desc-after" id="desc-3" type="text" placeholder="내역"
+            onkeydown="if(event.key==='Enter')document.getElementById('amt-3').focus()">
+          <div class="quickadd-row-after">
+            <input class="input-amount-after" id="amt-3"
+              type="number" inputmode="decimal" placeholder="0"
+              oninput="onAmountInput(this,'#6DB88A')"
+              onkeydown="if(event.key==='Enter')doAdd(3)">
+            <span class="input-sym">¥</span>
+            <button class="btn-add" onclick="doAdd(3)">+</button>
+          </div>
+          <div class="progress-track progress-track-after">
+            <div class="progress-fill" id="prog-3" style="width:0%;background:#6DB88A"></div>
+          </div>
+          <div class="cat-total-row">
+            <span class="cat-total-num" id="total-3">—</span>
+            <span class="cat-total-sym">¥</span>
+          </div>
+        </div>
+
+        <!-- 쇼핑 -->
+        <div class="cat-card" id="card-4">
+          <div class="cat-card-header">
+            <span class="cat-label" style="color:#C09060">쇼핑</span>
+            <div style="display:flex;align-items:center;gap:4px">
+              <button class="cat-toggle-btn">∨</button>
+            </div>
+          </div>
+          <input class="input-desc-after" id="desc-4" type="text" placeholder="내역"
+            onkeydown="if(event.key==='Enter')document.getElementById('amt-4').focus()">
+          <div class="quickadd-row-after">
+            <input class="input-amount-after" id="amt-4"
+              type="number" inputmode="decimal" placeholder="0"
+              oninput="onAmountInput(this,'#C09060')"
+              onkeydown="if(event.key==='Enter')doAdd(4)">
+            <span class="input-sym">¥</span>
+            <button class="btn-add" onclick="doAdd(4)">+</button>
+          </div>
+          <div class="cat-total-row">
+            <span class="cat-total-num" id="total-4">—</span>
+            <span class="cat-total-sym">¥</span>
+          </div>
+        </div>
+
+      </div><!-- /grid -->
+
+      <input class="day-memo" type="text" placeholder="메모 (선택)">
+    </div><!-- /day-panel -->
+
+    <div class="annotation annotation-after">
+      <div class="title">개선된 점 — 직접 입력해보세요</div>
+      ① 내역(위) → 금액(아래) 2행 고정 노출, 둘 다 필수
+        <span class="badge badge-new">NEW</span><br>
+      ② 내역 입력 후 Enter → 금액으로 자동 포커스 이동
+        <span class="badge badge-new">NEW</span><br>
+      ③ 빈 칸 + 클릭 시 해당 필드 빨간 흔들림 피드백
+        <span class="badge badge-new">NEW</span><br>
+      ④ inputmode="decimal" → 모바일 숫자 키패드 자동
+        <span class="badge badge-new">NEW</span><br>
+      ⑤ 진행 바 2px → 5px, 예산 현황 즉시 파악
+        <span class="badge badge-new">NEW</span><br>
+      ⑥ 추가 후 카드 플래시 + 진동 피드백
+        <span class="badge badge-new">NEW</span>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  /* ── Tab switch ── */
+  function switchTab(id, btn) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  /* ── Amount input border color ── */
+  function onAmountInput(el, color) {
+    el.style.borderBottomColor = el.value ? color : '#2A2822';
+  }
+
+  /* ── State ── */
+  const catTotals  = { 1: 2350, 2: 0, 3: 0, 4: 0 };
+  const catBudgets = { 1: 6000, 2: 3000, 3: 2000, 4: null };
+  const catColors  = { 1: '#E8845A', 2: '#7EB5D6', 3: '#6DB88A', 4: '#C09060' };
+
+  /* ── Shake a field to signal required ── */
+  function shakeField(el) {
+    el.classList.remove('field-error');
+    el.offsetHeight;
+    el.classList.add('field-error');
+    el.focus();
+    setTimeout(() => el.classList.remove('field-error'), 400);
+  }
+
+  /* ── Add item ── */
+  function doAdd(n) {
+    const amtEl  = document.getElementById('amt-'  + n);
+    const descEl = document.getElementById('desc-' + n);
+    const val  = parseFloat(amtEl.value);
+    const desc = descEl.value.trim();
+
+    if (!val || val <= 0) { shakeField(amtEl);  return; }
+    if (!desc)            { shakeField(descEl); return; }
+
+    catTotals[n] += val;
+
+    // Update total
+    const totalEl = document.getElementById('total-' + n);
+    totalEl.textContent = catTotals[n].toLocaleString();
+    totalEl.classList.add('has-data');
+
+    // Update progress bar
+    const prog = document.getElementById('prog-' + n);
+    if (prog && catBudgets[n]) {
+      const pct = Math.min(catTotals[n] / catBudgets[n] * 100, 100);
+      prog.style.width = pct + '%';
+      prog.style.background = pct >= 100 ? '#E06060' : catColors[n];
+    }
+
+    // Update day total
+    const dayTotal = Object.values(catTotals).reduce((a, b) => a + b, 0);
+    document.getElementById('day-total-after').innerHTML =
+      dayTotal.toLocaleString() + '<span class="day-total-sym">¥</span>';
+
+    // Flash card
+    const card = document.getElementById('card-' + n);
+    card.style.animation = 'none';
+    card.offsetHeight;
+    card.style.animation = 'card-flash 0.45s ease';
+
+    // Vibrate (mobile)
+    if (navigator.vibrate) navigator.vibrate(40);
+
+    // Clear inputs, return focus to amount
+    amtEl.value  = '';
+    descEl.value = '';
+    amtEl.style.borderBottomColor = '#2A2822';
+    amtEl.focus();
+  }
+
+  /* ── Day tab click ── */
+  function selectDay(n) {
+    document.querySelectorAll('#day-tabs-after .day-tab').forEach((t, i) => {
+      t.classList.toggle('active', i + 1 === n);
+    });
+    document.getElementById('active-day-label').textContent = n;
+  }
+
+  /* ── Swipe gesture on day-panel ── */
+  let touchStartX = null;
+  let activeDay = 3;
+
+  document.addEventListener('touchstart', e => {
+    if (e.target.closest('#day-panel-after')) {
+      touchStartX = e.touches[0].clientX;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    if (touchStartX === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    touchStartX = null;
+    if (Math.abs(dx) < 40) return;
+    if (dx < 0 && activeDay < 7) activeDay++;
+    else if (dx > 0 && activeDay > 1) activeDay--;
+    selectDay(activeDay);
+  }, { passive: true });
+</script>
+</body>
+</html>

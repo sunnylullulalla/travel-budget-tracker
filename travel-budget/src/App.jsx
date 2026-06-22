@@ -802,6 +802,7 @@ function Tracker({ config, onReset, onHardReset }) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [expandedCats, setExpandedCats] = useState(new Set());
   const [quickAddState, setQuickAddState] = useState({});
+  const [shakeField, setShakeField] = useState(null);
 
   useEffect(() => { setExpandedCats(new Set()); setQuickAddState({}); }, [activeDay]);
 
@@ -850,9 +851,20 @@ function Tracker({ config, onReset, onHardReset }) {
 
   const handleQuickAdd = (catId) => {
     const qa = quickAddState[catId] || { label: "", amount: "" };
-    if (!qa.amount) return;
+    if (!qa.label) {
+      setShakeField({ catId, field: "label" });
+      setTimeout(() => setShakeField(null), 600);
+      return;
+    }
+    if (!qa.amount) {
+      setShakeField({ catId, field: "amount" });
+      setTimeout(() => setShakeField(null), 600);
+      document.getElementById(`qa-amt-${catId}`)?.focus();
+      return;
+    }
     addCatItem(activeDay, catId, qa.label, qa.amount);
     setQuickAddState(prev => ({ ...prev, [catId]: { label: "", amount: "" } }));
+    setShakeField(null);
   };
 
   const updateCatItem = (dayNum, catId, itemId, field, value) => {
@@ -1035,7 +1047,7 @@ function Tracker({ config, onReset, onHardReset }) {
               </div>
             </div>
           ) : (
-            <div className="day-input-grid" style={{ display: "grid", gridTemplateColumns: cats.length === 1 ? "1fr" : "1fr 1fr", gridAutoRows: 180, gap: 10, marginBottom: 14 }}>
+            <div className="day-input-grid" style={{ display: "grid", gridTemplateColumns: cats.length === 1 ? "1fr" : "1fr 1fr", gap: 10, marginBottom: 14 }}>
               {cats.map(cat => {
                 const catBudget = cat.budget ? parseFloat(cat.budget) : null;
                 const todayItems = getCatItems(activeDayData, cat.id);
@@ -1064,38 +1076,47 @@ function Tracker({ config, onReset, onHardReset }) {
                         >{isExpanded ? "∧" : "∨"}</button>
                       </div>
                     </div>
-                    {/* Quick-add row — always visible, above total */}
+                    {/* Quick-add: 내역(위) → 금액+버튼(아래) */}
                     {(() => {
                       const qa = quickAddState[cat.id] || { label: "", amount: "" };
+                      const labelError = shakeField?.catId === cat.id && shakeField?.field === "label";
+                      const amtError   = shakeField?.catId === cat.id && shakeField?.field === "amount";
                       return (
-                        <div className="cat-card-quickadd" style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                        <div className="cat-card-quickadd" style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                           <input
                             className="quickadd-label"
                             type="text"
                             placeholder="내역"
                             value={qa.label}
                             onChange={e => setQuickAddState(prev => ({ ...prev, [cat.id]: { ...(prev[cat.id] || {}), label: e.target.value } }))}
-                            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleQuickAdd(cat.id); } }}
-                            style={{ flex: 1, background: "transparent", border: "none", borderBottom: "1px solid #2A2822", color: "#C0B8A8", fontSize: 12, fontFamily: "'Noto Sans KR', sans-serif", padding: "2px 0", outline: "none", minWidth: 0 }}
+                            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); document.getElementById(`qa-amt-${cat.id}`)?.focus(); } }}
+                            style={{ background: "transparent", border: "none", borderBottom: `1px solid ${labelError ? "#E06060" : "#2A2822"}`, color: "#C0B8A8", fontSize: 12, fontFamily: "'Noto Sans KR', sans-serif", padding: "4px 0", outline: "none", width: "100%" }}
                           />
-                          <input
-                            className="quickadd-amount"
-                            type="number"
-                            placeholder="0"
-                            value={qa.amount}
-                            onChange={e => setQuickAddState(prev => ({ ...prev, [cat.id]: { ...(prev[cat.id] || {}), amount: e.target.value } }))}
-                            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleQuickAdd(cat.id); } }}
-                            style={{ width: 52, background: "transparent", border: "none", borderBottom: `1px solid ${qa.amount ? cat.color : "#2A2822"}`, color: "#F0EDE6", fontSize: 13, fontFamily: "monospace", padding: "2px 0", outline: "none", textAlign: "right" }}
-                          />
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <input
+                              id={`qa-amt-${cat.id}`}
+                              className="quickadd-amount"
+                              type="number"
+                              inputMode="decimal"
+                              placeholder="0"
+                              value={qa.amount}
+                              onChange={e => setQuickAddState(prev => ({ ...prev, [cat.id]: { ...(prev[cat.id] || {}), amount: e.target.value } }))}
+                              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleQuickAdd(cat.id); } }}
+                              style={{ flex: 1, background: "transparent", border: "none", borderBottom: `1px solid ${amtError ? "#E06060" : qa.amount ? cat.color : "#2A2822"}`, color: "#F0EDE6", fontSize: 16, fontFamily: "monospace", padding: "4px 0", outline: "none", textAlign: "right", minWidth: 0 }}
+                            />
+                            <span style={{ fontSize: 12, color: "#6A6050", flexShrink: 0 }}>{sym}</span>
+                            <button
+                              onClick={() => handleQuickAdd(cat.id)}
+                              style={{ background: "none", border: "1px solid #3A3830", borderRadius: 6, color: "#8A8070", fontSize: 17, cursor: "pointer", padding: "1px 9px", flexShrink: 0, lineHeight: 1.4, fontFamily: "monospace" }}
+                            >+</button>
+                          </div>
                         </div>
                       );
                     })()}
-                    {/* Spacer — pushes progress + total to bottom */}
-                    <div style={{ flex: 1 }} />
                     {/* Mini progress bar — just above total */}
                     {catBudget !== null && (
                       <div className="cat-card-progress-wrap" style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
-                        <div className="cat-card-progress-track" style={{ flex: 1, height: 2, background: "#1E1C18", borderRadius: 2, overflow: "hidden" }}>
+                        <div className="cat-card-progress-track" style={{ flex: 1, height: 5, background: "#1E1C18", borderRadius: 3, overflow: "hidden" }}>
                           <div className="cat-card-progress-fill" style={{
                             height: "100%", borderRadius: 2,
                             width: `${Math.min((todaySpent / catBudget) * 100, 100)}%`,

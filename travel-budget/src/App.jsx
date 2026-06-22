@@ -803,6 +803,8 @@ function Tracker({ config, onReset, onHardReset }) {
   const [expandedCats, setExpandedCats] = useState(new Set());
   const [quickAddState, setQuickAddState] = useState({});
   const [shakeField, setShakeField] = useState(null);
+  const [toastMsg, setToastMsg] = useState(null);
+  const toastTimer = useRef(null);
 
   useEffect(() => { setExpandedCats(new Set()); setQuickAddState({}); }, [activeDay]);
 
@@ -862,9 +864,13 @@ function Tracker({ config, onReset, onHardReset }) {
       document.getElementById(`qa-amt-${catId}`)?.focus();
       return;
     }
+    const catName = cats.find(c => c.id === catId)?.label || "";
     addCatItem(activeDay, catId, qa.label, qa.amount);
     setQuickAddState(prev => ({ ...prev, [catId]: { label: "", amount: "" } }));
     setShakeField(null);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToastMsg(`✓  ${catName}  ${Number(qa.amount).toLocaleString()}${sym}`);
+    toastTimer.current = setTimeout(() => setToastMsg(null), 1800);
   };
 
   const updateCatItem = (dayNum, catId, itemId, field, value) => {
@@ -1102,13 +1108,10 @@ function Tracker({ config, onReset, onHardReset }) {
                               value={qa.amount}
                               onChange={e => setQuickAddState(prev => ({ ...prev, [cat.id]: { ...(prev[cat.id] || {}), amount: e.target.value } }))}
                               onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleQuickAdd(cat.id); } }}
+                              onBlur={() => { const q = quickAddState[cat.id] || {}; if (q.label && q.amount) handleQuickAdd(cat.id); }}
                               style={{ flex: 1, background: "transparent", border: "none", borderBottom: `1px solid ${amtError ? "#E06060" : qa.amount ? cat.color : "#2A2822"}`, color: "#F0EDE6", fontSize: 16, fontFamily: "monospace", padding: "4px 0", outline: "none", textAlign: "right", minWidth: 0 }}
                             />
                             <span style={{ fontSize: 12, color: "#6A6050", flexShrink: 0 }}>{sym}</span>
-                            <button
-                              onClick={() => handleQuickAdd(cat.id)}
-                              style={{ background: "none", border: "1px solid #3A3830", borderRadius: 6, color: "#8A8070", fontSize: 17, cursor: "pointer", padding: "1px 9px", flexShrink: 0, lineHeight: 1.4, fontFamily: "monospace" }}
-                            >+</button>
                           </div>
                         </div>
                       );
@@ -1280,6 +1283,24 @@ function Tracker({ config, onReset, onHardReset }) {
           © 이 앱의 소유권은 @minorimaiori에게 있습니다
         </p>
       </div>
+
+      {/* Toast */}
+      {toastMsg && (
+        <div style={{
+          position: "fixed", bottom: 36, left: "50%",
+          transform: "translateX(-50%)",
+          background: "#2A2820", border: "1px solid #3A3830",
+          color: "#F0EDE6", fontSize: 13,
+          padding: "10px 22px", borderRadius: 24, zIndex: 999,
+          fontFamily: "'Noto Sans KR', sans-serif",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
+          animation: "toast-in 0.2s ease",
+          whiteSpace: "nowrap", letterSpacing: "0.01em",
+          pointerEvents: "none",
+        }}>
+          {toastMsg}
+        </div>
+      )}
     </div>
   );
 }

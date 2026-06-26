@@ -365,6 +365,80 @@ const fmtCompact = (n) => {
 
 
 
+// ── Backup / Restore helpers ────────────────────────────────────────────────
+// Gathers config + every saved-days bucket into one portable object.
+const buildBackup = () => {
+  const data = { app: "travel-budget", schema: 1, exportedAt: new Date().toISOString(), config: null, days: {} };
+  try {
+    const cfg = localStorage.getItem(CONFIG_KEY);
+    if (cfg) data.config = JSON.parse(cfg);
+  } catch (e) {}
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(DAYS_KEY_PREFIX)) {
+        try { data.days[key] = JSON.parse(localStorage.getItem(key)); } catch (e) {}
+      }
+    }
+  } catch (e) {}
+  return data;
+};
+
+const backupFilename = () => {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `여행예산_백업_${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`;
+};
+
+// Returns: "shared" | "downloaded" | "cancelled" | "error"
+const runBackup = async () => {
+  const json = JSON.stringify(buildBackup(), null, 2);
+  const filename = backupFilename();
+  // Mobile-first: share the file (KakaoTalk 나에게 보내기, 메일, 파일 앱 등). iOS 15+/Android.
+  try {
+    if (typeof navigator !== "undefined" && navigator.canShare) {
+      const file = new File([json], filename, { type: "application/json" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: "여행 예산 백업" });
+        return "shared";
+      }
+    }
+  } catch (e) {
+    if (e && e.name === "AbortError") return "cancelled"; // user closed the share sheet
+    // otherwise fall through to download
+  }
+  // Fallback (desktop, or share unsupported): download the file.
+  try {
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return "downloaded";
+  } catch (e) {
+    return "error";
+  }
+};
+
+const parseBackup = (text) => {
+  const data = JSON.parse(text);
+  if (!data || data.app !== "travel-budget") throw new Error("not a travel-budget backup");
+  return data;
+};
+
+const applyBackup = (data) => {
+  if (data.config) localStorage.setItem(CONFIG_KEY, JSON.stringify(data.config));
+  if (data.days) {
+    Object.entries(data.days).forEach(([k, v]) => {
+      if (k.startsWith(DAYS_KEY_PREFIX)) localStorage.setItem(k, JSON.stringify(v));
+    });
+  }
+};
+
 const makeDay = (n, cats) => {
   const obj = { day: n, note: "" };
   cats.forEach(c => { obj[c.id] = ""; });
@@ -805,6 +879,9 @@ function Tracker({ config, onReset, onHardReset }) {
   const [shakeField, setShakeField] = useState(null);
   const [toastMsg, setToastMsg] = useState(null);
   const toastTimer = useRef(null);
+  const [pendingBackup, setPendingBackup] = useState(false); // data changed since last backup
+  const [restoreData, setRestoreData] = useState(null);      // parsed backup awaiting confirm
+  const fileInputRef = useRef(null);
 
   useEffect(() => { setExpandedCats(new Set()); setQuickAddState({}); }, [activeDay]);
 
@@ -825,6 +902,7 @@ function Tracker({ config, onReset, onHardReset }) {
     try {
       localStorage.setItem(daysStorageKey, JSON.stringify({ savedCats: newCats, savedDays: newDays }));
       setSaveStatus("saved");
+      setPendingBackup(true);
       setTimeout(() => setSaveStatus("idle"), 1400);
     } catch (e) {
       setSaveStatus("error");
@@ -907,6 +985,46 @@ function Tracker({ config, onReset, onHardReset }) {
     setShowEditor(false);
   };
 
+  const showToast = (msg) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToastMsg(msg);
+    toastTimer.current = setTimeout(() => setToastMsg(null), 2000);
+  };
+
+  const handleBackup = async () => {
+    const result = await runBackup();
+    if (result === "cancelled") return;
+    if (result === "error") { showToast("⚠ 저장에 실패했어요"); return; }
+    setPendingBackup(false);
+    showToast(result === "shared" ? "✓ 백업 파일을 보냈어요" : "✓ 백업 파일을 저장했어요");
+  };
+
+  const handleRestorePick = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file later
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        setRestoreData(parseBackup(String(reader.result)));
+      } catch (err) {
+        showToast("⚠ 올바른 백업 파일이 아니에요");
+      }
+    };
+    reader.onerror = () => showToast("⚠ 파일을 읽지 못했어요");
+    reader.readAsText(file);
+  };
+
+  const confirmRestore = () => {
+    try {
+      applyBackup(restoreData);
+      window.location.reload();
+    } catch (e) {
+      setRestoreData(null);
+      showToast("⚠ 복원에 실패했어요");
+    }
+  };
+
   const getDayTotal = (d) => cats.reduce((s, c) => s + getCatTotal(d, c.id), 0);
   const getCumulative = (n) => days.slice(0, n).reduce((s, d) => s + getDayTotal(d), 0);
 
@@ -981,7 +1099,7 @@ function Tracker({ config, onReset, onHardReset }) {
         </div>
       </div>
 
-      <div className="tracker-body" style={{ maxWidth: 480, margin: "0 auto", padding: "16px 14px" }}>
+      <div className="tracker-body" style={{ maxWidth: 480, margin: "0 auto", padding: "16px 14px 128px" }}>
         {/* Cumulative */}
         <div className="cumulative-bar" style={{ background: delta >= 0 ? "#141A16" : "#1A1414", border: `1px solid ${delta >= 0 ? "#1E3020" : "#301E1E"}`, borderRadius: 12, padding: "12px 16px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div className="cumulative-left">
@@ -1286,10 +1404,68 @@ function Tracker({ config, onReset, onHardReset }) {
         </p>
       </div>
 
+      {/* Restore confirm modal */}
+      {restoreData && (
+        <div className="restore-confirm-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div className="restore-confirm-modal" style={{ background: "#1A1814", borderRadius: 20, padding: "28px 24px", maxWidth: 340, width: "100%", border: "1px solid #2A2822" }}>
+            <p style={{ fontSize: 18, margin: "0 0 12px", fontWeight: "normal" }}>이 백업으로 복원할까요?</p>
+            <p style={{ fontSize: 13, color: "#8A8070", margin: "0 0 8px", lineHeight: 1.7 }}>
+              백업 시점: {restoreData.exportedAt ? new Date(restoreData.exportedAt).toLocaleString() : "알 수 없음"}
+            </p>
+            <p style={{ fontSize: 13, color: "#E8A87C", margin: "0 0 24px", lineHeight: 1.7 }}>
+              ⚠ 지금 이 기기에 입력된 내용은 백업 내용으로 덮어써집니다. 되돌릴 수 없어요.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setRestoreData(null)} style={{
+                flex: 1, padding: "13px", background: "#0F0E0C", border: "1px solid #2A2822",
+                borderRadius: 12, color: "#8A8070", fontSize: 14, fontFamily: "'Noto Sans KR', sans-serif", cursor: "pointer",
+              }}>취소</button>
+              <button onClick={confirmRestore} style={{
+                flex: 1, padding: "13px", background: "linear-gradient(135deg,#E8845A,#7EB5D6)", border: "none",
+                borderRadius: 12, color: "#0F0E0C", fontSize: 14, fontFamily: "'Noto Sans KR', sans-serif", fontWeight: "bold", cursor: "pointer",
+              }}>복원</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sticky backup bar — always visible */}
+      <div className="backup-bar" style={{
+        position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 50,
+        padding: "26px 14px 14px",
+        background: "linear-gradient(180deg, rgba(15,14,12,0) 0%, #0F0E0C 40%)",
+        pointerEvents: "none",
+      }}>
+        <div style={{ maxWidth: 480, margin: "0 auto", pointerEvents: "auto" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
+            <button className="btn-backup" onClick={handleBackup} style={{
+              flex: 1, position: "relative", padding: "15px",
+              background: "linear-gradient(135deg,#E8845A,#7EB5D6)", border: "none", borderRadius: 14,
+              color: "#0F0E0C", fontSize: 15, fontWeight: "bold", fontFamily: "'Noto Sans KR', sans-serif",
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              boxShadow: "0 6px 20px rgba(232,132,90,0.28)",
+            }}>
+              💾 저장
+              {pendingBackup && <span style={{ position: "absolute", top: 9, right: 11, width: 8, height: 8, borderRadius: "50%", background: "#E06060", boxShadow: "0 0 0 2px #0F0E0C" }} />}
+            </button>
+            <button className="btn-restore" onClick={() => fileInputRef.current?.click()} style={{
+              flexShrink: 0, padding: "15px 16px", background: "#1A1814", border: "1px solid #2A2822",
+              borderRadius: 14, color: "#8A8070", fontSize: 13, fontFamily: "'Noto Sans KR', sans-serif", cursor: "pointer",
+            }}>가져오기</button>
+          </div>
+          <p style={{ textAlign: "center", fontSize: 11, margin: "9px 0 0", letterSpacing: "0.02em", lineHeight: 1.5, color: pendingBackup ? "#E8A87C" : "#6A6050" }}>
+            {pendingBackup
+              ? "입력 내용이 아직 백업되지 않았어요 · 💾 저장을 눌러 보관하세요"
+              : "입력을 마치면 💾 저장을 한 번씩 눌러 백업하세요"}
+          </p>
+        </div>
+        <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={handleRestorePick} style={{ display: "none" }} />
+      </div>
+
       {/* Toast */}
       {toastMsg && (
         <div style={{
-          position: "fixed", bottom: 36, left: "50%",
+          position: "fixed", bottom: 104, left: "50%",
           transform: "translateX(-50%)",
           background: "#2A2820", border: "1px solid #3A3830",
           color: "#F0EDE6", fontSize: 13,
@@ -1379,7 +1555,10 @@ export default function App() {
             </p>
             <div style={{ borderTop: "1px solid #2A2822", paddingTop: 16, marginBottom: 24 }}>
               <p style={{ fontSize: 14, color: "#6A6050", margin: 0, lineHeight: 1.9, textAlign: "center" }}>
-                📌 데이터는 이 기기에서만 저장되므로 여행 내내 같은 기기로 사용하고, 시크릿 모드는 피해주세요!
+                📌 데이터는 이 기기에서만 저장돼요. 여행 내내 같은 기기로 사용하고, 시크릿 모드는 피해주세요!
+              </p>
+              <p style={{ fontSize: 14, color: "#A09880", margin: "12px 0 0", lineHeight: 1.9, textAlign: "center" }}>
+                💾 지출을 입력한 뒤엔 아래 <strong style={{ color: "#E8A87C" }}>저장</strong> 버튼을 한 번씩 눌러 백업 파일을 보관하세요. 기기를 잃어버려도 <strong style={{ color: "#E8A87C" }}>가져오기</strong>로 되살릴 수 있어요.
               </p>
             </div>
             <button
